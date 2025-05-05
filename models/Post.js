@@ -1,0 +1,42 @@
+"use strict";
+const { Model } = require("sequelize");
+
+module.exports = (sequelize, DataTypes) => {
+  class Post extends Model {
+    static associate(models) {
+      Post.belongsTo(models.User, { foreignKey: "author_id" });
+      Post.belongsTo(models.Group, { foreignKey: "group_id" });
+      Post.hasMany(models.Comment, { foreignKey: "post_id" });
+      Post.hasMany(models.Like, { foreignKey: "post_id" });
+      Post.hasMany(models.Bookmark, { foreignKey: "post_id" });
+    }
+  }
+
+  Post.init(
+    {
+      post_id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      author_id: DataTypes.UUID,
+      group_id: DataTypes.UUID,
+      title: DataTypes.STRING,
+      content: DataTypes.TEXT,
+      like_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      },
+    },
+    {
+      sequelize,
+      modelName: "Post",
+      tableName: "Posts",
+      timestamps: true,
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+    }
+  );
+
+  return Post;
+};
