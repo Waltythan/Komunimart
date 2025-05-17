@@ -1,7 +1,7 @@
 // src/pages/LoginPage.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './AuthForm.css';
+import '../styles/AuthForm.css';
 
 export default function LoginPage() {
   const [uname, setUname] = useState('');
