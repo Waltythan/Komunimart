@@ -1,8 +1,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-const db = require('../models');
+const db = require('../../models');
 const { User } = db;
-const dbConfig = require('./config/config.json').development;
+const dbConfig = require('../../config/config.json').development;
 
 const app = express();
 const PORT = process.env.PORT || 3000;

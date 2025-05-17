@@ -29,7 +29,10 @@ fs
   .forEach(file => {
     // Hanya require file .js jika sudah di-build, atau .ts jika pakai ts-node
     const modelPath = path.join(__dirname, file);
-    const model = require(modelPath)(sequelize, Sequelize.DataTypes);
+    let imported = require(modelPath);
+    // Support both CommonJS and ES module exports
+    const modelFactory = imported.default ? imported.default : imported;
+    const model = modelFactory(sequelize, Sequelize.DataTypes);
     db[model.name] = model;
   });
 
