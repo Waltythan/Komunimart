@@ -22,12 +22,14 @@ fs
     return (
       file.indexOf('.') !== 0 &&
       file !== basename &&
-      file.slice(-3) === '.js' &&
-      file.indexOf('.test.js') === -1
+      (file.slice(-3) === '.js' || file.slice(-3) === '.ts') &&
+      file.indexOf('.test.') === -1
     );
   })
   .forEach(file => {
-    const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
+    // Hanya require file .js jika sudah di-build, atau .ts jika pakai ts-node
+    const modelPath = path.join(__dirname, file);
+    const model = require(modelPath)(sequelize, Sequelize.DataTypes);
     db[model.name] = model;
   });
 

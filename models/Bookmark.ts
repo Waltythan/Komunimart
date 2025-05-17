@@ -1,9 +1,18 @@
-"use strict";
-const { Model } = require("sequelize");
+import { Model, DataTypes, Sequelize, Association } from "sequelize";
 
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize: Sequelize) => {
   class Bookmark extends Model {
-    static associate(models) {
+    public bookmark_id!: string;
+    public user_id!: string;
+    public post_id!: string;
+    public bookmarked!: boolean;
+
+    public static associations: {
+      user: Association<Bookmark, any>;
+      post: Association<Bookmark, any>;
+    };
+
+    static associate(models: any) {
       Bookmark.belongsTo(models.User, { foreignKey: "user_id" });
       Bookmark.belongsTo(models.Post, { foreignKey: "post_id" });
     }

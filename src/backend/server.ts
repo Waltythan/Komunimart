@@ -1,6 +1,7 @@
-const express = require('express');
-const cors = require('cors');
-const { User } = require('./models');
+import express, { Request, Response } from 'express';
+import cors from 'cors';
+const db = require('../models');
+const { User } = db;
 const dbConfig = require('./config/config.json').development;
 
 const app = express();
@@ -11,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 // Register route
-app.post('/auth/register', async (req, res) => {
+app.post('/auth/register', async (req: any, res: any) => {
   const { uname, email, password } = req.body;
 
   if (!uname || !email || !password) {
@@ -26,7 +27,7 @@ app.post('/auth/register', async (req, res) => {
     });
 
     console.log('✅ User registered:', {
-      id: newUser.id,
+      id: newUser.user_id,
       uname: newUser.uname,
       email: newUser.email,
     });
@@ -34,7 +35,7 @@ app.post('/auth/register', async (req, res) => {
     res.status(201).json({
       message: 'User registered successfully.',
       user: {
-        id: newUser.id,
+        id: newUser.user_id,
         uname: newUser.uname,
         email: newUser.email,
       },
@@ -43,13 +44,13 @@ app.post('/auth/register', async (req, res) => {
     console.error('❌ Error creating user:', err);
     res.status(500).json({
       message: 'Error creating user',
-      error: err.message,
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 });
 
 // Login route (optional for future use)
-app.post('/auth/login', async (req, res) => {
+app.post('/auth/login', async (req: any, res: any) => {
   const { uname, password } = req.body;
 
   if (!uname || !password) {
@@ -78,7 +79,8 @@ app.post('/auth/login', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Login error:', err);
-    res.status(500).json({ message: 'Login failed.', error: err.message });
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ message: 'Login failed.', error: errorMessage });
   }
 });
 
@@ -91,7 +93,7 @@ app.listen(PORT, () => {
 app.get('/debug/users', async (req, res) => {
   try {
     const users = await User.findAll({ order: [['user_id', 'DESC']] });
-    console.log('🔍 Users from DB:', users.map(u => u.toJSON()));
+    console.log('🔍 Users from DB:', users.map((u: any) => u.toJSON()));
     res.json(users);
   } catch (err) {
     console.error('❌ Failed to fetch users:', err);

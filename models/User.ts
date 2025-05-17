@@ -1,9 +1,23 @@
-"use strict";
-const { Model } = require("sequelize");
+import { Model, DataTypes, Sequelize, Association } from 'sequelize';
 
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize: Sequelize) => {
   class User extends Model {
-    static associate(models) {
+    public user_id!: number;
+    public uname!: string;
+    public email!: string;
+    public password!: string;
+    public role!: 'admin' | 'member';
+    public groupId?: number;
+
+    public static associations: {
+      posts: Association<User, any>;
+      comments: Association<User, any>;
+      likes: Association<User, any>;
+      bookmarks: Association<User, any>;
+      groups: Association<User, any>;
+    };
+
+    static associate(models: any) {
       User.hasMany(models.Post, { foreignKey: "author_id" });
       User.hasMany(models.Comment, { foreignKey: "author_id" });
       User.hasMany(models.Like, { foreignKey: "user_id" });
@@ -20,7 +34,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       user_id: {
         type: DataTypes.INTEGER,
-        autoIncrement: true, 
+        autoIncrement: true,
         primaryKey: true,
       },
       uname: DataTypes.STRING,
