@@ -19,8 +19,8 @@ module.exports = (sequelize, DataTypes) => {
   User.init(
     {
       user_id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.INTEGER,
+        autoIncrement: true, 
         primaryKey: true,
       },
       uname: DataTypes.STRING,
@@ -30,14 +30,23 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("admin", "member"),
         defaultValue: "member",
       },
+      groupId: {
+        type: DataTypes.INTEGER,
+        references: {
+          model: "Groups",
+          key: "group_id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "SET NULL",
+      },
     },
     {
       sequelize,
       modelName: "User",
       tableName: "Users",
       timestamps: true,
-      createdAt: "created_at",
-      updatedAt: false,
+      createdAt: "createdAt",
+      updatedAt: "updatedAt",
     }
   );
 

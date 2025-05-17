@@ -11,9 +11,11 @@
   "dependencies": {
     "@types/express": "^5.0.1",
     "@types/sequelize": "^4.28.20",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "mysql2": "^3.14.1",
-    "pg": "^8.15.5",
+    "pg": "^8.16.0",
+    "pg-hstore": "^2.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.6.0",

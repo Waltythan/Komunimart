@@ -15,14 +15,19 @@ export default function RegisterPage() {
     }
 
     try {
-      // This will need to be connected to your real API
-      console.log('Registering:', { uname, email, password });
-      
-      // For now, just navigate to login page after "registration"
+      const res = await fetch('http://localhost:3000/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uname, email, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Registration failed');
+      }
       alert('Registration successful!');
       navigate('/');
-    } catch (err) {
-      alert('Registration failed');
+    } catch (err: any) {
+      alert('Registration failed: ' + err.message);
     }
   };
 

@@ -1,93 +1,100 @@
-// server.js with detailed error logging
 const express = require('express');
 const cors = require('cors');
 const { User } = require('./models');
+const dbConfig = require('./config/config.json').development;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enhanced CORS configuration
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Add your frontend URLs
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// Test database connection on startup
-(async () => {
-  try {
-    await User.sequelize.authenticate();
-    console.log('✅ Database connection established successfully.');
-  } catch (err) {
-    console.error('❌ Unable to connect to the database:', err);
-  }
-})();
-
-// Register route with enhanced error handling
+// Register route
 app.post('/auth/register', async (req, res) => {
-  console.log('📝 Register request received:', req.body);
-  
   const { uname, email, password } = req.body;
 
   if (!uname || !email || !password) {
-    console.log('❌ Missing required fields');
     return res.status(400).json({ message: 'All fields are required.' });
   }
 
   try {
-    console.log('Creating user in database...');
     const newUser = await User.create({
       uname,
       email,
-      password, // Note: plain text, not hashed yet
+      password, // plain text for now
     });
 
-    console.log('✅ User created successfully:', newUser.user_id);
+    console.log('✅ User registered:', {
+      id: newUser.id,
+      uname: newUser.uname,
+      email: newUser.email,
+    });
+
     res.status(201).json({
       message: 'User registered successfully.',
       user: {
-        id: newUser.user_id,
+        id: newUser.id,
         uname: newUser.uname,
         email: newUser.email,
       },
     });
   } catch (err) {
     console.error('❌ Error creating user:', err);
-    
-    // Check for specific database errors
-    if (err.name === 'SequelizeUniqueConstraintError') {
-      return res.status(409).json({ 
-        message: 'A user with that username or email already exists.',
-        error: err.message 
-      });
-    }
-    
-    if (err.name === 'SequelizeConnectionError') {
-      return res.status(503).json({ 
-        message: 'Database connection issue. Please try again later.',
-        error: err.message 
-      });
-    }
-    
-    res.status(500).json({ 
-      message: 'Error creating user', 
+    res.status(500).json({
+      message: 'Error creating user',
       error: err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
   }
 });
 
-// Simple hello endpoint
-app.get('/api/hello', (req, res) => {
-  res.json({ message: 'Hello from the server!' });
+// Login route (optional for future use)
+app.post('/auth/login', async (req, res) => {
+  const { uname, password } = req.body;
+
+  if (!uname || !password) {
+    return res.status(400).json({ message: 'Username and password are required.' });
+  }
+
+  try {
+    const user = await User.findOne({ where: { uname } });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (user.password !== password) {
+      return res.status(401).json({ message: 'Incorrect password.' });
+    }
+
+    res.status(200).json({
+      message: 'Login successful.',
+      user: {
+        id: user.user_id,
+        uname: user.uname,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error('❌ Login error:', err);
+    res.status(500).json({ message: 'Login failed.', error: err.message });
+  }
 });
 
-// Proper catch-all route
-app.use((req, res) => {
-  res.status(404).send('Not Found');
-});
-
+// Start server
 app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`🗄️ Connected to DB: ${dbConfig.database} as ${dbConfig.uname} @ ${dbConfig.host}:${dbConfig.port}`);
+});
+
+app.get('/debug/users', async (req, res) => {
+  try {
+    const users = await User.findAll({ order: [['user_id', 'DESC']] });
+    console.log('🔍 Users from DB:', users.map(u => u.toJSON()));
+    res.json(users);
+  } catch (err) {
+    console.error('❌ Failed to fetch users:', err);
+    res.status(500).json({ message: 'Error fetching users' });
+  }
 });
