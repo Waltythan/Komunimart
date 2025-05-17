@@ -1,9 +1,9 @@
 // src/App.tsx
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import GroupListPage from './pages/GroupList';
-import MainPage from './pages/MainPage';
+import LoginPage from './pages/pages/LoginPage';
+import RegisterPage from './pages/pages/RegisterPage';
+import GroupListPage from './pages/pages/GroupList';
+import MainPage from './pages/pages/MainPage';
 // import PostDetailPage from './pages/PostDetail';
 import './App.css';
 
