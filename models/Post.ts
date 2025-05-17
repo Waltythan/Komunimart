@@ -2,9 +2,9 @@ import { Model, DataTypes, Sequelize, Association } from "sequelize";
 
 export default (sequelize: Sequelize) => {
   class Post extends Model {
-    public post_id!: string;
-    public author_id!: string;
-    public group_id!: string;
+    public post_id!: number;
+    public author_id!: number;
+    public group_id!: number;
     public title!: string;
     public content!: string;
     public like_count!: number;
@@ -29,12 +29,12 @@ export default (sequelize: Sequelize) => {
   Post.init(
     {
       post_id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
         primaryKey: true,
       },
-      author_id: DataTypes.UUID,
-      group_id: DataTypes.UUID,
+      author_id: DataTypes.INTEGER,
+      group_id: DataTypes.INTEGER,
       title: DataTypes.STRING,
       content: DataTypes.TEXT,
       like_count: {

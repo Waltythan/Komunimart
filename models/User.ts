@@ -2,12 +2,12 @@ import { Model, DataTypes, Sequelize, Association } from 'sequelize';
 
 export default (sequelize: Sequelize) => {
   class User extends Model {
-    public user_id!: number;
+    public user_id!: number; // INTEGER
     public uname!: string;
     public email!: string;
     public password!: string;
     public role!: 'admin' | 'member';
-    public groupId?: number;
+    public groupId?: number; // INTEGER
 
     public static associations: {
       posts: Association<User, any>;
@@ -59,8 +59,8 @@ export default (sequelize: Sequelize) => {
       modelName: "User",
       tableName: "Users",
       timestamps: true,
-      createdAt: "createdAt",
-      updatedAt: "updatedAt",
+      createdAt: "created_at",
+      updatedAt: "updated_at",
     }
   );
 

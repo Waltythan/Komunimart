@@ -3,6 +3,8 @@ import cors from 'cors';
 const db = require('../../models');
 const { User } = db;
 const dbConfig = require('../../config/config.json').development;
+import groupRoutes from './routes/groups';
+import postRoutes from './routes/posts';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -83,6 +85,11 @@ app.post('/auth/login', async (req: any, res: any) => {
     res.status(500).json({ message: 'Login failed.', error: errorMessage });
   }
 });
+
+// Use group routes
+app.use('/groups', groupRoutes);
+// Use post routes
+app.use('/posts', postRoutes);
 
 // Start server
 app.listen(PORT, () => {

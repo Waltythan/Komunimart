@@ -2,10 +2,10 @@ import { Model, DataTypes, Sequelize, Association } from "sequelize";
 
 export default (sequelize: Sequelize) => {
   class Group extends Model {
-    public group_id!: string;
+    public group_id!: number;
     public name!: string;
     public description!: string;
-    public created_by!: string;
+    public created_by!: number;
 
     public static associations: {
       creator: Association<Group, any>;
@@ -27,13 +27,13 @@ export default (sequelize: Sequelize) => {
   Group.init(
     {
       group_id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
         primaryKey: true,
       },
       name: DataTypes.STRING,
       description: DataTypes.STRING,
-      created_by: DataTypes.UUID,
+      created_by: DataTypes.INTEGER,
     },
     {
       sequelize,

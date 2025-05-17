@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
 type Comment = {
@@ -15,13 +15,20 @@ const GroupDetailPage: React.FC = () => {
     name: "React Enthusiasts",
     description: "A group for React fans.",
   });
-
   const [comments, setComments] = useState<Comment[]>([
     { id: 'c1', author: 'User 1', content: 'Great preview!' },
     { id: 'c2', author: 'User 2', content: 'Looking forward to it!' }
   ]);
-
   const [newComment, setNewComment] = useState("");
+  const [posts, setPosts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      const res = await fetch(`http://localhost:3000/posts/group/${groupId}`);
+      if (res.ok) setPosts(await res.json());
+    };
+    fetchPosts();
+  }, [groupId]);
 
   const handleAddComment = () => {
     if (!newComment.trim()) return;
@@ -43,7 +50,18 @@ const GroupDetailPage: React.FC = () => {
         >
           New Post
         </button>
-
+        <hr className="my-4" />
+        <h3 className="font-bold mb-2">Posts:</h3>
+        <div className="space-y-2 mb-6">
+          {posts.length === 0 && <div className="text-gray-400">Belum ada post.</div>}
+          {posts.map(post => (
+            <div key={post.post_id} className="border rounded p-3 bg-gray-50">
+              <div className="font-semibold">{post.title}</div>
+              <div className="text-gray-700 mb-1">{post.content}</div>
+              <div className="text-xs text-gray-500">Oleh User #{post.author_id}</div>
+            </div>
+          ))}
+        </div>
         <hr className="my-4" />
         <h3 className="font-bold">Komentar:</h3>
         <div className="space-y-2">
