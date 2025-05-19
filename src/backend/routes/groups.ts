@@ -21,7 +21,9 @@ console.log('DEBUG Group model:', Group);
 // POST /groups - Create a new group
 router.post('/', async (req, res) => {
   const { name, description } = req.body;
-  if (!name) return res.status(400).json({ message: 'Group name is required.' });
+  if (!name) {
+    res.status(400).json({ error: 'Group name is required.' });
+  }
   try {
     const newGroup = await Group.create({ name, description });
     res.status(201).json({ message: 'Group created successfully.', group: newGroup });

@@ -10,7 +10,7 @@ router.post('/', async (req, res) => {
   try {
     const { groupId, userId, title, content } = req.body;
     if (!groupId || !userId || !title || !content) {
-      return res.status(400).json({ error: 'groupId, userId, title, and content are required' });
+      res.status(400).json({ error: 'groupId, userId, title, and content are required' });
     }
     const post = await db.Post.create({
       group_id: groupId,
