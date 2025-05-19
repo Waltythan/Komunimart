@@ -1,53 +1,62 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-
-type Post = {
-  id: string;
-  title: string;
-  author: string;
-  content: string;
-  commentsCount: number;
-};
+import React, { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import '../styles/MainPage.css';
 
 const MainPage: React.FC = () => {
-  const [groupName] = useState("React Enthusiasts");
-  const [posts] = useState<Post[]>([
-    {
-      id: '1',
-      title: "React 19 Preview",
-      author: "Admin A",
-      content: "React 19 is coming soon with suspense and new features...",
-      commentsCount: 3
-    },
-    {
-      id: '2',
-      title: "Komunimart Tips",
-      author: "Admin B",
-      content: "Want to improve your group engagement? Here are 5 quick tips...",
-      commentsCount: 1
-    }
-  ]);
+  const { groupId } = useParams<{ groupId: string }>();
+  const [groupName, setGroupName] = useState('');
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch group name
+        const groupRes = await fetch(`http://localhost:3000/groups`);
+        if (groupRes.ok) {
+          const groups = await groupRes.json();
+          const group = groups.find((g: any) => String(g.group_id) === groupId);
+          setGroupName(group ? group.name : 'Unknown Group');
+        }
+        // Fetch posts for this group
+        const postsRes = await fetch(`http://localhost:3000/posts/group/${groupId}`);
+        if (postsRes.ok) {
+          setPosts(await postsRes.json());
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (groupId) fetchData();
+  }, [groupId]);
+
+  if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <h1 className="text-2xl font-bold text-center mb-4">{groupName}</h1>
-      <h2 className="text-xl font-semibold text-center mb-6">Postingan Terbaru</h2>
-
-      <div className="max-w-2xl mx-auto space-y-6">
-        {posts.map(post => (
-          <div key={post.id} className="bg-white p-4 rounded shadow">
-            <h3 className="text-lg font-bold">{post.title}</h3>
-            <p className="text-sm text-gray-600">Oleh: {post.author}</p>
-            <p className="my-2 text-gray-700">{post.content.slice(0, 100)}...</p>
-            <div className="flex justify-between text-sm text-blue-600">
-              <Link to={`/post/${post.id}`} className="hover:underline">
-                Lihat Selengkapnya
-              </Link>
-              <span>Komentar ({post.commentsCount})</span>
+    <div className="main-container">
+      <header className="main-header">
+        <h1 className="app-title">Komunimart</h1>
+        <p className="group-name">Grup: {groupName}</p>
+      </header>
+      <main className="feed-container">
+        <h2 className="section-title">Postingan Terbaru</h2>
+        <div className="post-list">
+          {posts.map(post => (
+            <div key={post.post_id} className="post-item">
+              <h3 className="post-title">{post.title}</h3>
+              <p className="post-author">Oleh: User #{post.author_id}</p>
+              <p className="post-content">{post.content.slice(0, 100)}...</p>
+              <div className="post-footer">
+                <Link to={`/post/${post.post_id}`} className="post-link">
+                  Lihat Selengkapnya
+                </Link>
+                {/* Anda bisa menambahkan jumlah komentar jika tersedia */}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </main>
     </div>
   );
 };
