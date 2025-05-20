@@ -1,0 +1,136 @@
+/* GroupDetail.css */
+
+.group-detail-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+  background-color: #f0f2f5;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.group-header {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.group-header h1 {
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+  color: #1877f2;
+}
+
+.group-header p {
+  color: #555;
+  margin-bottom: 12px;
+}
+
+.group-header button {
+  background-color: #1877f2;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.group-header button:hover {
+  background-color: #145fd6;
+}
+
+.group-section {
+  background-color: #fff;
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.group-section h2 {
+  margin-bottom: 12px;
+  font-size: 1.3rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 6px;
+}
+
+.group-post {
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.group-post h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.group-post p {
+  margin: 6px 0;
+  color: #444;
+}
+
+.group-post span {
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.no-posts {
+  color: #777;
+  font-style: italic;
+}
+
+.group-comment {
+  padding: 10px 0;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.group-comment strong {
+  color: #333;
+}
+
+.comment-form {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comment-form textarea {
+  resize: vertical;
+  min-height: 80px;
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.comment-form button {
+  align-self: flex-end;
+  background-color: #42b72a;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.comment-form button:hover {
+  background-color: #36a420;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .group-detail-container {
+    padding: 16px;
+  }
+
+  .group-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .group-section h2 {
+    font-size: 1.1rem;
+  }
+}

@@ -38,4 +38,25 @@ router.get('/group/:groupId', async (req, res) => {
   }
 });
 
+// Add a comment to a post
+(router as any).post('/:postId/comments', async (req: any, res: any) => {
+  try {
+    const { author_id, content, parent_id } = req.body;
+    const { postId } = req.params;
+    if (!author_id || !content) {
+      return res.status(400).json({ error: 'author_id and content are required' });
+    }
+    const comment = await db.Comment.create({
+      userId: author_id,      // sesuai migration
+      postId: postId,         // sesuai migration
+      text: content,          // sesuai migration
+      parent_id: parent_id || null, // tambahkan field ini di migration jika ingin support reply
+    });
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error('Error creating comment:', err);
+    res.status(500).json({ error: 'Failed to create comment' });
+  }
+});
+
 export default router;

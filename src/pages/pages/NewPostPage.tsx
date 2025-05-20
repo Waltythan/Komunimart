@@ -1,70 +1,94 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import '../styles/NewPostPage.css';
 
 const NewPostPage: React.FC = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [post, setPost] = useState<any>(null);
+  const [comments, setComments] = useState<any[]>([]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  useEffect(() => {
+    // Fetch post detail
+    fetch(`http://localhost:3000/posts/${groupId}`)
+      .then(res => res.json())
+      .then(setPost);
+    // Fetch comments
+    fetch(`http://localhost:3000/posts/${groupId}/comments`)
+      .then(res => res.json())
+      .then(setComments);
+  }, [groupId]);
+
+  const handleSubmit = async () => {
+    if (!title || !content) {
+      alert('Judul dan isi harus diisi!');
+      return;
+    }
+
     try {
-      // TODO: Replace with actual userId from auth context/session
-      const userId = 1;
-      const res = await fetch('http://localhost:3000/posts', {
+      const res = await fetch(`http://localhost:3000/posts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, userId, title, content }),
+        body: JSON.stringify({
+          title,
+          content,
+          groupId: groupId,
+          userId: 1, // Placeholder, ganti dengan user login sebenarnya
+        }),
       });
-      if (!res.ok) throw new Error('Failed to create post');
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Gagal menambahkan post');
+      }
+
+      alert('Post berhasil ditambahkan!');
       navigate(`/groups/${groupId}`);
     } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      alert('Error: ' + err.message);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center">
-      <h1 className="text-2xl font-bold mb-4">Buat Post Baru</h1>
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow max-w-lg w-full space-y-4">
+    <div className="new-post-container">
+      <h2>Buat Postingan Baru</h2>
+      <div className="form-group">
+        <label>Judul</label>
         <input
-          className="w-full p-2 border rounded"
           type="text"
-          placeholder="Judul Post"
           value={title}
           onChange={e => setTitle(e.target.value)}
-          required
+          placeholder="Masukkan judul postingan"
         />
+      </div>
+      <div className="form-group">
+        <label>Isi</label>
         <textarea
-          className="w-full p-2 border rounded"
-          placeholder="Isi Post"
           value={content}
           onChange={e => setContent(e.target.value)}
-          required
-        />
-        {error && <div className="text-red-500">{error}</div>}
-        <button
-          type="submit"
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-          disabled={loading}
-        >
-          {loading ? 'Menyimpan...' : 'Simpan'}
-        </button>
-        <button
-          type="button"
-          className="bg-gray-300 text-black px-4 py-2 rounded ml-2"
-          onClick={() => navigate(-1)}
-        >
-          Batal
-        </button>
-      </form>
+          placeholder="Tulis isi postingan..."
+        ></textarea>
+      </div>
+      <button onClick={handleSubmit}>Posting</button>
+      {post && (
+        <div className="post-detail">
+          <h3>Detail Postingan</h3>
+          <h4>{post.title}</h4>
+          <p>{post.content}</p>
+        </div>
+      )}
+      {comments.length > 0 && (
+        <div className="comments-section">
+          <h3>Komentar</h3>
+          {comments.map(comment => (
+            <div key={comment.id} className="comment">
+              <p>{comment.content}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

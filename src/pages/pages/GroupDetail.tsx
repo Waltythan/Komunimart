@@ -1,91 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-
-type Comment = {
-  id: string;
-  author: string;
-  content: string;
-};
+import React, { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import '../styles/MainPage.css';
+import '../styles/GroupDetail.css';
 
 const GroupDetailPage: React.FC = () => {
-  const { groupId } = useParams();
-  const navigate = useNavigate();
-  const [group] = useState({
-    id: groupId,
-    name: "React Enthusiasts",
-    description: "A group for React fans.",
-  });
-  const [comments, setComments] = useState<Comment[]>([
-    { id: 'c1', author: 'User 1', content: 'Great preview!' },
-    { id: 'c2', author: 'User 2', content: 'Looking forward to it!' }
-  ]);
-  const [newComment, setNewComment] = useState("");
+  const { groupId } = useParams<{ groupId: string }>();
+  const [groupName, setGroupName] = useState('');
   const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      const res = await fetch(`http://localhost:3000/posts/group/${groupId}`);
-      if (res.ok) setPosts(await res.json());
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch group name
+        const groupRes = await fetch(`http://localhost:3000/groups`);
+        if (groupRes.ok) {
+          const groups = await groupRes.json();
+          const group = groups.find((g: any) => String(g.group_id) === groupId);
+          setGroupName(group ? group.name : 'Unknown Group');
+        }
+        // Fetch posts for this group
+        const postsRes = await fetch(`http://localhost:3000/posts/group/${groupId}`);
+        if (postsRes.ok) {
+          setPosts(await postsRes.json());
+        }
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchPosts();
+    if (groupId) fetchData();
   }, [groupId]);
 
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
-    const newId = `c${Date.now()}`;
-    setComments([...comments, { id: newId, author: "You", content: newComment }]);
-    setNewComment("");
-  };
+  if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <h1 className="text-2xl font-bold text-center mb-4">{group.name}</h1>
-      <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow space-y-3">
-        <h2 className="text-xl font-bold">{group.name}</h2>
-        <p className="text-gray-600">{group.description}</p>
-        {/* New Post Button */}
-        <button
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mb-4"
-          onClick={() => navigate(`/groups/${group.id}/new-post`)}
-        >
-          New Post
-        </button>
-        <hr className="my-4" />
-        <h3 className="font-bold mb-2">Posts:</h3>
-        <div className="space-y-2 mb-6">
-          {posts.length === 0 && <div className="text-gray-400">Belum ada post.</div>}
+    <div className="main-container">
+      <header className="main-header">
+        <h1 className="app-title">Komunimart</h1>
+        <p className="group-name">Grup: {groupName}</p>
+      </header>
+      <main className="feed-container">
+        <h2 className="section-title">Postingan Terbaru</h2>
+        <div style={{ marginBottom: 16 }}>
+          <Link to={`/groups/${groupId}/new-post`} className="post-create-btn">
+            + Buat Postingan Baru
+          </Link>
+        </div>
+        <div className="post-list">
           {posts.map(post => (
-            <div key={post.post_id} className="border rounded p-3 bg-gray-50">
-              <div className="font-semibold">{post.title}</div>
-              <div className="text-gray-700 mb-1">{post.content}</div>
-              <div className="text-xs text-gray-500">Oleh User #{post.author_id}</div>
+            <div key={post.post_id} className="post-item">
+              <h3 className="post-title">{post.title}</h3>
+              <p className="post-author">Oleh: User #{post.author_id}</p>
+              <p className="post-content">{post.content.slice(0, 100)}...</p>
+              <div className="post-footer">
+                <Link to={`/post/${post.post_id}`} className="post-link">
+                  Lihat Selengkapnya
+                </Link>
+                {/* Anda bisa menambahkan jumlah komentar jika tersedia */}
+              </div>
             </div>
           ))}
         </div>
-        <hr className="my-4" />
-        <h3 className="font-bold">Komentar:</h3>
-        <div className="space-y-2">
-          {comments.map(comment => (
-            <p key={comment.id}>
-              <span className="font-semibold">{comment.author}</span>: {comment.content}
-            </p>
-          ))}
-        </div>
-        <div className="mt-4">
-          <h4 className="font-semibold mb-1">Tambah Komentar:</h4>
-          <textarea
-            className="w-full p-2 border rounded"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-          />
-          <button
-            onClick={handleAddComment}
-            className="mt-2 bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
-          >
-            Kirim
-          </button>
-        </div>
-      </div>
+      </main>
     </div>
   );
 };

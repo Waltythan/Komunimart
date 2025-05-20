@@ -33,6 +33,15 @@ router.post('/', async (req, res) => {
   }
 });
 
+// GET /groups/new - Render a form or return a template for creating a new group (API placeholder)
+router.get('/new', (req, res) => {
+  // Untuk aplikasi SPA/React, biasanya frontend yang render form.
+  // Endpoint ini bisa dipakai untuk validasi, atau abaikan jika hanya REST API.
+  res.status(200).json({
+    message: 'Form pembuatan grup baru. Silakan gunakan POST /groups untuk submit data.'
+  });
+});
+
 // Ensure this file is imported as:
 // import groupRoutes from './routes/groups';
 // or for CommonJS: const groupRoutes = require('./routes/groups').default;

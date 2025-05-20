@@ -1,75 +1,106 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import '../styles/PostDetail.css';
 
-type Comment = {
-  id: string;
-  author: string;
+// Komentar dari backend
+interface Comment {
+  comment_id: number;
+  author_id: number;
   content: string;
-};
+  parent_id?: number | null; // Untuk reply
+  author_name?: string; // opsional, jika backend mengirim nama user
+}
 
-const GroupDetailPage: React.FC = () => {
-  const { groupId } = useParams();
-  const navigate = useNavigate();
-  const [group] = useState({
-    id: groupId,
-    name: "React Enthusiasts",
-    description: "A group for React fans.",
-  });
+const PostDetail: React.FC = () => {
+  const { postId } = useParams();
+  const [post, setPost] = useState<any>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [replyTo, setReplyTo] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [comments, setComments] = useState<Comment[]>([
-    { id: 'c1', author: 'User 1', content: 'Great preview!' },
-    { id: 'c2', author: 'User 2', content: 'Looking forward to it!' }
-  ]);
+  // Fetch post detail & comments
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const postRes = await fetch(`http://localhost:3000/posts/${postId}`);
+        if (postRes.ok) setPost(await postRes.json());
+        const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`);
+        if (commentRes.ok) setComments(await commentRes.json());
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (postId) fetchData();
+  }, [postId]);
 
-  const [newComment, setNewComment] = useState("");
-
-  const handleAddComment = () => {
+  // Submit comment or reply
+  const handleAddComment = async () => {
     if (!newComment.trim()) return;
-    const newId = `c${Date.now()}`;
-    setComments([...comments, { id: newId, author: "You", content: newComment }]);
-    setNewComment("");
+    try {
+      const res = await fetch(`http://localhost:3000/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: newComment,
+          author_id: 1, // Ganti dengan user login sebenarnya
+          parent_id: replyTo, // null jika komentar utama
+        }),
+      });
+      if (!res.ok) throw new Error('Gagal menambah komentar');
+      setNewComment('');
+      setReplyTo(null);
+      // Refresh comments
+      const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`);
+      if (commentRes.ok) setComments(await commentRes.json());
+    } catch (err) {
+      alert('Gagal menambah komentar');
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <h1 className="text-2xl font-bold text-center mb-4">{group.name}</h1>
-      <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow space-y-3">
-        <h2 className="text-xl font-bold">{group.name}</h2>
-        <p className="text-gray-600">{group.description}</p>
-        {/* New Post Button */}
-        <button
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mb-4"
-          onClick={() => navigate(`/groups/${group.id}/new-post`)}
-        >
-          New Post
-        </button>
-
-        <hr className="my-4" />
-        <h3 className="font-bold">Komentar:</h3>
-        <div className="space-y-2">
-          {comments.map(comment => (
-            <p key={comment.id}>
-              <span className="font-semibold">{comment.author}</span>: {comment.content}
-            </p>
-          ))}
+  // Render komentar dan reply secara nested
+  const renderComments = (parentId: number | null = null, level = 0) =>
+    comments
+      .filter((c) => c.parent_id === parentId)
+      .map((comment) => (
+        <div key={comment.comment_id} className="comment-item" style={{ marginLeft: level * 24 }}>
+          <strong>{comment.author_name || `User #${comment.author_id}`}</strong>: {comment.content}
+          <button style={{ marginLeft: 8, fontSize: '0.9em' }} onClick={() => setReplyTo(comment.comment_id)}>
+            Balas
+          </button>
+          {renderComments(comment.comment_id, level + 1)}
         </div>
-        <div className="mt-4">
-          <h4 className="font-semibold mb-1">Tambah Komentar:</h4>
+      ));
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div className="post-detail-container">
+      <div className="post-content-box">
+        <h2 className="post-title">{post?.title || `Judul Post #${postId}`}</h2>
+        <p className="post-author">Oleh: User #{post?.author_id || postId}</p>
+        <p className="post-body">{post?.content || 'Ini adalah isi lengkap dari postingan ini.'}</p>
+      </div>
+      <div className="comment-section">
+        <h3>Komentar</h3>
+        {renderComments()}
+        <div className="comment-form">
+          {replyTo && (
+            <div style={{ marginBottom: 8 }}>
+              Membalas komentar #{replyTo} <button onClick={() => setReplyTo(null)}>Batal</button>
+            </div>
+          )}
           <textarea
-            className="w-full p-2 border rounded"
+            placeholder={replyTo ? 'Tulis balasan...' : 'Tulis komentar...'}
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
           />
-          <button
-            onClick={handleAddComment}
-            className="mt-2 bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
-          >
-            Kirim
-          </button>
+          <button onClick={handleAddComment}>Kirim</button>
         </div>
       </div>
     </div>
   );
 };
 
-export default GroupDetailPage;
+export default PostDetail;

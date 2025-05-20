@@ -1,0 +1,69 @@
+/* NewPostPage.css */
+
+.new-post-container {
+  max-width: 600px;
+  margin: 60px auto;
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.new-post-container h2 {
+  font-size: 1.5rem;
+  margin-bottom: 24px;
+  color: #1877f2;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+button {
+  background-color: #1877f2;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+}
+
+button:hover {
+  background-color: #145fd6;
+}
+
+@media (max-width: 600px) {
+  .new-post-container {
+    margin: 40px 16px;
+    padding: 20px;
+  }
+
+  button {
+    font-size: 0.95rem;
+  }
+}
