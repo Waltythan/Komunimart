@@ -48,4 +48,8 @@ export class Group extends Model<Group> {
 
   @HasMany(() => Post, 'group_id')
   declare posts: Post[];
+
+  // Tambahkan kolom image_url
+  @Column({ type: DataType.STRING, allowNull: true })
+  declare image_url: string | null;
 }

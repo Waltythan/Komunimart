@@ -36,6 +36,9 @@ export class Post extends Model<Post> {
   @Column({ type: DataType.TEXT, allowNull: false })
   declare content: string;
 
+  @Column({ type: DataType.STRING, allowNull: true })
+  declare image_url: string | null;
+
   @BelongsTo(() => Group, 'group_id')
   declare group: Group;
 

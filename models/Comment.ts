@@ -36,6 +36,9 @@ export class Comment extends Model<Comment> {
   @Column({ type: DataType.UUID, allowNull: true })
   declare parent_id?: string | null;
 
+  @Column({ type: DataType.STRING, allowNull: true })
+  declare image_url: string | null;
+
   @BelongsTo(() => User, 'author_id')
   declare author: User;
 

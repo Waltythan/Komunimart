@@ -58,4 +58,7 @@ export class User extends Model<User> {
 
   @HasMany(() => Comment, 'author_id')
   declare comments: Comment[];
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  declare profile_pic: string | null;
 }

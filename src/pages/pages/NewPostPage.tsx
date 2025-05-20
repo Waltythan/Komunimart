@@ -1,25 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../styles/NewPostPage.css';
+import '../styles/common.css';
 
 const NewPostPage: React.FC = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [post, setPost] = useState<any>(null);
-  const [comments, setComments] = useState<any[]>([]);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Fetch post detail
-    fetch(`http://localhost:3000/posts/${groupId}`)
-      .then(res => res.json())
-      .then(setPost);
-    // Fetch comments
-    fetch(`http://localhost:3000/posts/${groupId}/comments`)
-      .then(res => res.json())
-      .then(setComments);
-  }, [groupId]);
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   const handleSubmit = async () => {
     if (!title || !content) {
@@ -28,15 +26,19 @@ const NewPostPage: React.FC = () => {
     }
 
     try {
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('content', content);
+      formData.append('group_id', groupId || '');
+      formData.append('user_id', "8f45c368-ec32-4766-bb15-a178aa924a16"); // sementara hardcode user_id
+      
+      if (selectedImage) {
+        formData.append('image', selectedImage);
+      }
+
       const res = await fetch(`http://localhost:3000/posts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          content,
-          group_id: groupId,
-          user_id: "b4f6a9e6-0b70-4707-bfeb-e5638793d871", // sementara hardcode user_id
-        }),
+        body: formData,
       });
 
       if (!res.ok) {
@@ -71,24 +73,24 @@ const NewPostPage: React.FC = () => {
           placeholder="Tulis isi postingan..."
         ></textarea>
       </div>
+      <div className="form-group">
+        <label>Gambar (Opsional)</label>
+        <input 
+          type="file" 
+          accept="image/*" 
+          onChange={handleImageChange}
+        />
+        {imagePreview && (
+          <div className="image-preview">
+            <img 
+              src={imagePreview} 
+              alt="Post preview" 
+              style={{ maxWidth: '100%', maxHeight: '200px' }}
+            />
+          </div>
+        )}
+      </div>
       <button onClick={handleSubmit}>Posting</button>
-      {post && (
-        <div className="post-detail">
-          <h3>Detail Postingan</h3>
-          <h4>{post.title}</h4>
-          <p>{post.content}</p>
-        </div>
-      )}
-      {comments.length > 0 && (
-        <div className="comments-section">
-          <h3>Komentar</h3>
-          {comments.map(comment => (
-            <div key={comment.id} className="comment">
-              <p>{comment.content}</p>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

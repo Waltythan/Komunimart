@@ -6,6 +6,8 @@ const { User } = db;
 const dbConfig = require('../../config/config.json').development;
 import groupRoutes from './routes/groups';
 import postRoutes from './routes/posts';
+import { upload, getImageUrl } from './utils/fileUpload';
+import path from 'path';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -144,6 +146,47 @@ app.post('/auth/login', async (req: Request, res: Response) => {
     });
   }
 });
+
+// Upload profile picture
+app.post('/profile/image', upload.single('image'), async (req: Request, res: Response) => {
+  if (!req.file) {
+    res.status(400).json({ message: 'No file uploaded' });
+    return;
+  }
+  
+  try {
+    const { user_id } = req.body;
+    if (!user_id) {
+      res.status(400).json({ message: 'User ID is required' });
+      return;
+    }
+    
+    // Update user profile
+    const user = await User.findByPk(user_id);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    
+    // Save filename to database
+    await user.update({ profile_pic: req.file.filename });
+    
+    // Return success with image URL
+    res.json({
+      message: 'Profile picture uploaded successfully',
+      image_url: getImageUrl(req.file.filename, 'profile')
+    });
+  } catch (err) {
+    console.error('Error uploading profile picture:', err);
+    res.status(500).json({ 
+      message: 'Error uploading profile picture',
+      error: err instanceof Error ? err.message : String(err)
+    });
+  }
+});
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
 // Use group routes
 app.use('/groups', groupRoutes);

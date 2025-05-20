@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/GroupList.css';
+import '../styles/common.css';
 
 const NewGroupPage: React.FC = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -13,16 +24,28 @@ const NewGroupPage: React.FC = () => {
       alert('Nama grup wajib diisi');
       return;
     }
+    
     try {
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('description', description);
+      formData.append('created_by', "8f45c368-ec32-4766-bb15-a178aa924a16"); // sementara hardcode user_id
+      
+      if (selectedImage) {
+        formData.append('image', selectedImage);
+      }
+      
       const res = await fetch('http://localhost:3000/groups', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, created_by: "b4f6a9e6-0b70-4707-bfeb-e5638793d871" }), // sementara hardcode user_id
+        body: formData,
+        // Don't set Content-Type header
       });
+      
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || 'Gagal membuat grup');
       }
+      
       alert('Grup berhasil dibuat!');
       navigate('/groups');
     } catch (err: any) {
@@ -50,6 +73,23 @@ const NewGroupPage: React.FC = () => {
             onChange={e => setDescription(e.target.value)}
             placeholder="Deskripsi grup (opsional)"
           />
+        </div>
+        <div className="form-group">
+          <label>Gambar Grup (Opsional)</label>
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={handleImageChange}
+          />
+          {imagePreview && (
+            <div className="image-preview">
+              <img 
+                src={imagePreview} 
+                alt="Group preview" 
+                style={{ maxWidth: '100%', maxHeight: '200px' }}
+              />
+            </div>
+          )}
         </div>
         <button type="submit">Buat Grup</button>
       </form>
