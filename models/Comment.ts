@@ -3,7 +3,7 @@ import { Model, DataTypes, Sequelize, Association } from "sequelize";
 export default (sequelize: Sequelize) => {
   class Comment extends Model {
     public comment_id!: number;
-    public user_id!: number;
+    public author_id!: number;
     public post_id!: number;
     public text!: string;
     public parent_id?: number | null;
@@ -15,7 +15,7 @@ export default (sequelize: Sequelize) => {
     };
 
     static associate(models: any) {
-      Comment.belongsTo(models.User, { foreignKey: "user_id" });
+      Comment.belongsTo(models.User, { foreignKey: "author_id" });
       Comment.belongsTo(models.Post, { foreignKey: "post_id" });
       Comment.belongsTo(models.Comment, { foreignKey: "parent_id", as: "parent" });
       Comment.hasMany(models.Comment, { foreignKey: "parent_id", as: "replies" });
@@ -24,7 +24,11 @@ export default (sequelize: Sequelize) => {
 
   Comment.init(
     {
-      comment_id: DataTypes.INTEGER,
+      comment_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
       user_id: DataTypes.INTEGER,
       post_id: DataTypes.INTEGER,
       text: DataTypes.TEXT,

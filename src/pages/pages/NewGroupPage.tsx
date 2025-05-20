@@ -17,7 +17,7 @@ const NewGroupPage: React.FC = () => {
       const res = await fetch('http://localhost:3000/groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, description, created_by: 1 }), // sementara hardcode user_id
       });
       if (!res.ok) {
         const err = await res.json();

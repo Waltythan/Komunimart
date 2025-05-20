@@ -5,7 +5,7 @@ import '../styles/PostDetail.css';
 // Komentar dari backend
 interface Comment {
   comment_id: number;
-  author_id: number;
+  user_id: number;
   content: string;
   parent_id?: number | null; // Untuk reply
   author_name?: string; // opsional, jika backend mengirim nama user
@@ -44,7 +44,7 @@ const PostDetail: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: newComment,
-          author_id: 1, // Ganti dengan user login sebenarnya
+          user_id: 1, // sementara hardcode user_id
           parent_id: replyTo, // null jika komentar utama
         }),
       });
@@ -65,7 +65,7 @@ const PostDetail: React.FC = () => {
       .filter((c) => c.parent_id === parentId)
       .map((comment) => (
         <div key={comment.comment_id} className="comment-item" style={{ marginLeft: level * 24 }}>
-          <strong>{comment.author_name || `User #${comment.author_id}`}</strong>: {comment.content}
+          <strong>{comment.author_name || `User #${comment.user_id}`}</strong>: {comment.content}
           <button style={{ marginLeft: 8, fontSize: '0.9em' }} onClick={() => setReplyTo(comment.comment_id)}>
             Balas
           </button>

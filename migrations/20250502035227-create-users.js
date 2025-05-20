@@ -30,7 +30,7 @@ module.exports = {
         allowNull: false,
         defaultValue: 'member'
       },
-      groupId: {
+      group_id: {
         type: Sequelize.INTEGER,
         references: {
           model: 'Groups',

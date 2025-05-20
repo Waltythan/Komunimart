@@ -7,7 +7,7 @@ export default (sequelize: Sequelize) => {
     public email!: string;
     public password!: string;
     public role!: 'admin' | 'member';
-    public groupId?: number; // INTEGER
+    public group_id?: number; // INTEGER
 
     public static associations: {
       posts: Association<User, any>;
@@ -44,14 +44,12 @@ export default (sequelize: Sequelize) => {
         type: DataTypes.ENUM("admin", "member"),
         defaultValue: "member",
       },
-      groupId: {
+      group_id: {
         type: DataTypes.INTEGER,
         references: {
           model: "Groups",
           key: "group_id",
         },
-        onUpdate: "CASCADE",
-        onDelete: "SET NULL",
       },
     },
     {

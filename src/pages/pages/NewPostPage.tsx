@@ -34,8 +34,8 @@ const NewPostPage: React.FC = () => {
         body: JSON.stringify({
           title,
           content,
-          groupId: groupId,
-          userId: 1, // Placeholder, ganti dengan user login sebenarnya
+          group_id: groupId,
+          user_id: 1, // sementara hardcode user_id
         }),
       });
 

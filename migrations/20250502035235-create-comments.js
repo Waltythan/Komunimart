@@ -9,7 +9,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER,
       },
-      userId: {
+      author_id: {
         type: Sequelize.INTEGER,
         references: {
           model: 'Users',
@@ -18,7 +18,7 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      postId: {
+      post_id: {
         type: Sequelize.INTEGER,
         references: {
           model: 'Posts',
