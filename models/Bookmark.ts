@@ -1,41 +1,37 @@
-import { Model, DataTypes, Sequelize, Association } from "sequelize";
+import {
+  Table, Column, Model, DataType,
+  ForeignKey, BelongsTo
+} from 'sequelize-typescript';
+import { User } from './User';
+import { Post } from './Post';
 
-export default (sequelize: Sequelize) => {
-  class Bookmark extends Model {
-    public bookmark_id!: string;
-    public user_id!: string;
-    public post_id!: string;
-    public bookmarked!: boolean;
+@Table({
+  tableName: 'Bookmarks', timestamps: false
+})
 
-    public static associations: {
-      user: Association<Bookmark, any>;
-      post: Association<Bookmark, any>;
-    };
+export class Bookmark extends Model<Bookmark> {
+  @Column({
+    primaryKey: true,
+    allowNull: false,
+    type: DataType.UUID,
+    defaultValue: DataType.UUIDV4
+  })
+  declare bookmark_id: string;
 
-    static associate(models: any) {
-      Bookmark.belongsTo(models.User, { foreignKey: "user_id" });
-      Bookmark.belongsTo(models.Post, { foreignKey: "post_id" });
-    }
-  }
+  @ForeignKey(() => User)
+  @Column({ type: DataType.UUID, allowNull: false })
+  declare user_id: string;
 
-  Bookmark.init(
-    {
-      bookmark_id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-      },
-      user_id: DataTypes.UUID,
-      post_id: DataTypes.UUID,
-      bookmarked: DataTypes.BOOLEAN,
-    },
-    {
-      sequelize,
-      modelName: "Bookmark",
-      tableName: "Bookmarks",
-      timestamps: false,
-    }
-  );
+  @ForeignKey(() => Post)
+  @Column({ type: DataType.UUID, allowNull: false })
+  declare post_id: string;
 
-  return Bookmark;
-};
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: true })
+  declare bookmarked: boolean;
+
+  @BelongsTo(() => User, 'user_id')
+  declare user: User;
+
+  @BelongsTo(() => Post, 'post_id')
+  declare post: Post;
+}

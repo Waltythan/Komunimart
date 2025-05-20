@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/GroupList.css';
 
 type Group = {
-  group_id: number;
+  group_id: string;
   name: string;
   description: string;
 };

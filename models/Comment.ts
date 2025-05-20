@@ -1,51 +1,50 @@
-import { Model, DataTypes, Sequelize, Association } from "sequelize";
+import {
+  Table, Column, Model, DataType,
+  ForeignKey, BelongsTo, HasMany
+} from 'sequelize-typescript';
+import { User } from './User';
+import { Post } from './Post';
 
-export default (sequelize: Sequelize) => {
-  class Comment extends Model {
-    public comment_id!: number;
-    public author_id!: number;
-    public post_id!: number;
-    public text!: string;
-    public parent_id?: number | null;
+@Table({
+  tableName: 'Comments',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
+})
 
-    public static associations: {
-      user: Association<Comment, any>;
-      post: Association<Comment, any>;
-      parent: Association<Comment, any>;
-    };
+export class Comment extends Model<Comment> {
+  @Column({
+    primaryKey: true,
+    allowNull: false,
+    type: DataType.UUID,
+    defaultValue: DataType.UUIDV4
+  })
+  declare comment_id: string;
 
-    static associate(models: any) {
-      Comment.belongsTo(models.User, { foreignKey: "author_id" });
-      Comment.belongsTo(models.Post, { foreignKey: "post_id" });
-      Comment.belongsTo(models.Comment, { foreignKey: "parent_id", as: "parent" });
-      Comment.hasMany(models.Comment, { foreignKey: "parent_id", as: "replies" });
-    }
-  }
+  @ForeignKey(() => User)
+  @Column({ type: DataType.UUID, allowNull: false })
+  declare author_id: string;
 
-  Comment.init(
-    {
-      comment_id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      user_id: DataTypes.INTEGER,
-      post_id: DataTypes.INTEGER,
-      text: DataTypes.TEXT,
-      parent_id: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      },
-    },
-    {
-      sequelize,
-      modelName: "Comment",
-      tableName: "Comments",
-      timestamps: true,
-      createdAt: "createdAt",
-      updatedAt: "updatedAt",
-    }
-  );
+  @ForeignKey(() => Post)
+  @Column({ type: DataType.UUID, allowNull: false })
+  declare post_id: string;
 
-  return Comment;
-};
+  @Column({ type: DataType.TEXT, allowNull: false })
+  declare text: string;
+
+  @ForeignKey(() => Comment)
+  @Column({ type: DataType.UUID, allowNull: true })
+  declare parent_id?: string | null;
+
+  @BelongsTo(() => User, 'author_id')
+  declare author: User;
+
+  @BelongsTo(() => Post, 'post_id')
+  declare post: Post;
+
+  @BelongsTo(() => Comment, 'parent_id')
+  declare parent?: Comment;
+
+  @HasMany(() => Comment, 'parent_id')
+  declare replies: Comment[];
+}

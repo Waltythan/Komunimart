@@ -35,7 +35,7 @@ const NewPostPage: React.FC = () => {
           title,
           content,
           group_id: groupId,
-          user_id: 1, // sementara hardcode user_id
+          user_id: "b4f6a9e6-0b70-4707-bfeb-e5638793d871", // sementara hardcode user_id
         }),
       });
 

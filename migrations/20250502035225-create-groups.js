@@ -5,20 +5,16 @@ module.exports = {
     await queryInterface.createTable("Groups", {
       group_id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
       },
       name: {
         type: Sequelize.STRING,
         allowNull: false,
-        unique: true,
       },
       description: {
         type: Sequelize.TEXT,
-      },
-      created_by: {
-        type: Sequelize.INTEGER,
         allowNull: true,
       },
       created_at: {

@@ -28,7 +28,7 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
                 req.body = {};  // Initialize req.body if it's undefined
             }
 
-            req.body.userId = userId;  // Store the userId in req.body
+            req.body.user_id = userId;  // Store the userId in req.body
 
             next(); // Continue to the next middleware or route handler
         }

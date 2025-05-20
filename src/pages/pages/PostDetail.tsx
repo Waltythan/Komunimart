@@ -4,10 +4,10 @@ import '../styles/PostDetail.css';
 
 // Komentar dari backend
 interface Comment {
-  comment_id: number;
-  user_id: number;
-  content: string;
-  parent_id?: number | null; // Untuk reply
+  comment_id: string;
+  user_id: string;
+  text: string;             // backend pakai kolom "text"
+  parent_id?: string | null; // Untuk reply
   author_name?: string; // opsional, jika backend mengirim nama user
 }
 
@@ -16,7 +16,7 @@ const PostDetail: React.FC = () => {
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [replyTo, setReplyTo] = useState<number | null>(null);
+  const [replyTo, setReplyTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Fetch post detail & comments
@@ -43,8 +43,8 @@ const PostDetail: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: newComment,
-          user_id: 1, // sementara hardcode user_id
+          text: newComment,
+          user_id: "b4f6a9e6-0b70-4707-bfeb-e5638793d871", // sementara hardcode user_id
           parent_id: replyTo, // null jika komentar utama
         }),
       });
@@ -60,15 +60,13 @@ const PostDetail: React.FC = () => {
   };
 
   // Render komentar dan reply secara nested
-  const renderComments = (parentId: number | null = null, level = 0) =>
+  const renderComments = (parentId: string | null = null, level = 0) =>
     comments
       .filter((c) => c.parent_id === parentId)
       .map((comment) => (
         <div key={comment.comment_id} className="comment-item" style={{ marginLeft: level * 24 }}>
-          <strong>{comment.author_name || `User #${comment.user_id}`}</strong>: {comment.content}
-          <button style={{ marginLeft: 8, fontSize: '0.9em' }} onClick={() => setReplyTo(comment.comment_id)}>
-            Balas
-          </button>
+          <strong>{comment.author_name || `User #${comment.user_id}`}</strong>: {comment.text}
+          <button onClick={() => setReplyTo(comment.comment_id)}>Balas</button>
           {renderComments(comment.comment_id, level + 1)}
         </div>
       ));

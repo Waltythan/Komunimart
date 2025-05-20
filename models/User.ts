@@ -1,66 +1,61 @@
-import { Model, DataTypes, Sequelize, Association } from 'sequelize';
+import {
+  Table, Column, Model, DataType,
+  HasMany, ForeignKey
+} from 'sequelize-typescript';
+import { Post } from './Post';
+import { Comment } from './Comment';
+import { Group } from './Group';
 
-export default (sequelize: Sequelize) => {
-  class User extends Model {
-    public user_id!: number; // INTEGER
-    public uname!: string;
-    public email!: string;
-    public password!: string;
-    public role!: 'admin' | 'member';
-    public group_id?: number; // INTEGER
+@Table({
+  tableName: 'Users', timestamps: false
+})
 
-    public static associations: {
-      posts: Association<User, any>;
-      comments: Association<User, any>;
-      likes: Association<User, any>;
-      bookmarks: Association<User, any>;
-      groups: Association<User, any>;
-    };
+export class User extends Model<User> {
+  @Column({
+    primaryKey: true,
+    allowNull: false,
+    type: DataType.UUID,
+    defaultValue: DataType.UUIDV4
+  })
+  declare user_id: string;
 
-    static associate(models: any) {
-      User.hasMany(models.Post, { foreignKey: "author_id" });
-      User.hasMany(models.Comment, { foreignKey: "author_id" });
-      User.hasMany(models.Like, { foreignKey: "user_id" });
-      User.hasMany(models.Bookmark, { foreignKey: "user_id" });
-      User.belongsToMany(models.Group, {
-        through: "GroupMembers",
-        foreignKey: "user_id",
-        otherKey: "group_id",
-      });
-    }
-  }
+  @Column({ type: DataType.STRING, allowNull: false })
+  declare uname: string;
 
-  User.init(
-    {
-      user_id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-      },
-      uname: DataTypes.STRING,
-      email: DataTypes.STRING,
-      password: DataTypes.STRING,
-      role: {
-        type: DataTypes.ENUM("admin", "member"),
-        defaultValue: "member",
-      },
-      group_id: {
-        type: DataTypes.INTEGER,
-        references: {
-          model: "Groups",
-          key: "group_id",
-        },
-      },
-    },
-    {
-      sequelize,
-      modelName: "User",
-      tableName: "Users",
-      timestamps: true,
-      createdAt: "created_at",
-      updatedAt: "updated_at",
-    }
-  );
+  @Column({ type: DataType.STRING, allowNull: false })
+  declare email: string;
 
-  return User;
-};
+  @Column({ type: DataType.STRING, allowNull: false })
+  declare password: string;
+
+  @Column({
+    type: DataType.ENUM('admin', 'member'),
+    allowNull: false,
+    defaultValue: 'member'
+  })
+  declare role: string;
+
+  @ForeignKey(() => Group)
+  @Column({ type: DataType.UUID, allowNull: true })
+  declare group_id?: string;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    defaultValue: DataType.NOW
+  })
+  declare created_at: Date;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    defaultValue: DataType.NOW
+  })
+  declare updated_at: Date;
+
+  @HasMany(() => Post, 'author_id')
+  declare posts: Post[];
+
+  @HasMany(() => Comment, 'author_id')
+  declare comments: Comment[];
+}

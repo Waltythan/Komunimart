@@ -1,43 +1,26 @@
-import { Model, DataTypes, Sequelize, Association } from "sequelize";
+import {
+  Table, Column, Model, DataType,
+  ForeignKey, BelongsTo
+} from 'sequelize-typescript';
+import { User } from './User';
+import { Post } from './Post';
 
-export default (sequelize: Sequelize) => {
-  class Like extends Model {
-    public like_id!: string;
-    public user_id!: string;
-    public post_id!: string;
-    public liked!: boolean;
-    public unliked!: boolean;
+@Table({
+  tableName: 'Likes', timestamps: false
+})
 
-    public static associations: {
-      user: Association<Like, any>;
-      post: Association<Like, any>;
-    };
+export class Like extends Model<Like> {
+  @ForeignKey(() => User)
+  @Column({ type: DataType.UUID, allowNull: false })
+  declare user_id: string;
 
-    static associate(models: any) {
-      Like.belongsTo(models.User, { foreignKey: "user_id" });
-      Like.belongsTo(models.Post, { foreignKey: "post_id" });
-    }
-  }
+  @ForeignKey(() => Post)
+  @Column({ type: DataType.UUID, allowNull: false })
+  declare post_id: string;
 
-  Like.init(
-    {
-      like_id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-      },
-      user_id: DataTypes.UUID,
-      post_id: DataTypes.UUID,
-      liked: DataTypes.BOOLEAN,
-      unliked: DataTypes.BOOLEAN,
-    },
-    {
-      sequelize,
-      modelName: "Like",
-      tableName: "Likes",
-      timestamps: false,
-    }
-  );
+  @BelongsTo(() => User, 'user_id')
+  declare user: User;
 
-  return Like;
-};
+  @BelongsTo(() => Post, 'post_id')
+  declare post: Post;
+}

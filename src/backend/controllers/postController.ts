@@ -48,18 +48,21 @@ export const getPostById = async (req: Request, res: Response) => {
 
 export const addComment = async (req: Request, res: Response) => {
   try {
-    const { user_id, content, parent_id } = req.body;
+    const { user_id, text, parent_id } = req.body;
     const { postId } = req.params;
-    if (!user_id || !content) {
-      res.status(400).json({ error: 'user_id and content are required' });
+
+    if (!user_id || !text) {
+      res.status(400).json({ error: 'user_id and text are required' });
       return;
     }
+
     const comment = await db.Comment.create({
-      user_id,
-      post_id: Number(postId), // pastikan number
-      text: content,
+      author_id: user_id,
+      post_id: postId,
+      text,
       parent_id: parent_id || null,
     });
+
     res.status(201).json(comment);
   } catch (err) {
     console.error('Error creating comment:', err);

@@ -5,27 +5,29 @@ module.exports = {
     await queryInterface.createTable('Posts', {
       post_id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+      },
+      group_id: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: 'Groups',
+          key: 'group_id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
       author_id: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
+        allowNull: false,
         references: {
           model: 'Users',
           key: 'user_id',
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
-      },
-      group_id: {
-        type: Sequelize.INTEGER,
-        references: {
-          model: 'Groups',
-          key: 'group_id',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
       },
       title: {
         type: Sequelize.STRING,
@@ -35,16 +37,14 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: false,
       },
-      like_count: {
-        type: Sequelize.INTEGER,
-        defaultValue: 0,
-      },
       created_at: {
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
       updated_at: {
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
     });
@@ -52,5 +52,5 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('Posts');
-  }
+  },
 };

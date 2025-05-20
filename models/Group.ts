@@ -1,49 +1,51 @@
-import { Model, DataTypes, Sequelize, Association } from "sequelize";
+import {
+  Table, Column, Model, DataType,
+  HasMany, ForeignKey, BelongsTo
+} from 'sequelize-typescript';
+import { User } from './User';
+import { Post } from './Post';
 
-export default (sequelize: Sequelize) => {
-  class Group extends Model {
-    public group_id!: number;
-    public name!: string;
-    public description!: string;
-    public created_by!: number;
+@Table({ tableName: 'Groups', timestamps: false })
+export class Group extends Model<Group> {
+  @Column({
+    primaryKey: true,
+    allowNull: false,
+    type: DataType.UUID,
+    defaultValue: DataType.UUIDV4
+  })
+  declare group_id: string;
 
-    public static associations: {
-      creator: Association<Group, any>;
-      posts: Association<Group, any>;
-      users: Association<Group, any>;
-    };
+  @Column({ type: DataType.STRING, allowNull: false })
+  declare name: string;
 
-    static associate(models: any) {
-      Group.belongsTo(models.User, { foreignKey: "created_by" });
-      Group.hasMany(models.Post, { foreignKey: "group_id" });
-      Group.belongsToMany(models.User, {
-        through: "GroupMembers",
-        foreignKey: "group_id",
-        otherKey: "user_id",
-      });
-    }
-  }
+  @Column({ type: DataType.TEXT, allowNull: true })
+  declare description?: string;
 
-  Group.init(
-    {
-      group_id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-      },
-      name: DataTypes.STRING,
-      description: DataTypes.STRING,
-      created_by: DataTypes.INTEGER,
-    },
-    {
-      sequelize,
-      modelName: "Group",
-      tableName: "Groups",
-      timestamps: true,
-      createdAt: "created_at",
-      updatedAt: "updated_at",
-    }
-  );
+  // <<< tambahkan FK created_by
+  @ForeignKey(() => User)
+  @Column({ type: DataType.UUID, allowNull: false })
+  declare created_by: string;
 
-  return Group;
-};
+  @BelongsTo(() => User, 'created_by')
+  declare creator: User;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    defaultValue: DataType.NOW
+  })
+  declare created_at: Date;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    defaultValue: DataType.NOW
+  })
+  declare updated_at: Date;
+
+  @HasMany(() => User, 'group_id')
+  declare users: User[];
+
+  @HasMany(() => Post, 'group_id')
+  declare posts: Post[];
+}

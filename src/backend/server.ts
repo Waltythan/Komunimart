@@ -94,7 +94,7 @@ app.use('/posts', postRoutes);
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log(`🗄️ Connected to DB: ${dbConfig.database} as ${dbConfig.uname} @ ${dbConfig.host}:${dbConfig.port}`);
+  console.log(`🗄️ Connected to DB: ${dbConfig.database} as ${dbConfig.username} @ ${dbConfig.host}:${dbConfig.port}`);
 });
 
 app.get('/debug/users', async (req, res) => {

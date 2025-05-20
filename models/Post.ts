@@ -1,56 +1,47 @@
-import { Model, DataTypes, Sequelize, Association } from "sequelize";
+import {
+  Table, Column, Model, DataType,
+  ForeignKey, BelongsTo, HasMany
+} from 'sequelize-typescript';
+import { User } from './User';
+import { Group } from './Group';
+import { Comment } from './Comment';
 
-export default (sequelize: Sequelize) => {
-  class Post extends Model {
-    public post_id!: number;
-    public author_id!: number;
-    public group_id!: number;
-    public title!: string;
-    public content!: string;
-    public like_count!: number;
+@Table({
+  tableName: 'Posts',
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
+})
 
-    public static associations: {
-      user: Association<Post, any>;
-      group: Association<Post, any>;
-      comments: Association<Post, any>;
-      likes: Association<Post, any>;
-      bookmarks: Association<Post, any>;
-    };
+export class Post extends Model<Post> {
+  @Column({
+    primaryKey: true,
+    allowNull: false,
+    type: DataType.UUID,
+    defaultValue: DataType.UUIDV4
+  })
+  declare post_id: string;
 
-    static associate(models: any) {
-      Post.belongsTo(models.User, { foreignKey: "author_id" });
-      Post.belongsTo(models.Group, { foreignKey: "group_id" });
-      Post.hasMany(models.Comment, { foreignKey: "post_id" });
-      Post.hasMany(models.Like, { foreignKey: "post_id" });
-      Post.hasMany(models.Bookmark, { foreignKey: "post_id" });
-    }
-  }
+  @ForeignKey(() => Group)
+  @Column({ type: DataType.UUID, allowNull: false })
+  declare group_id: string;
 
-  Post.init(
-    {
-      post_id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-      },
-      author_id: DataTypes.INTEGER,
-      group_id: DataTypes.INTEGER,
-      title: DataTypes.STRING,
-      content: DataTypes.TEXT,
-      like_count: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      },
-    },
-    {
-      sequelize,
-      modelName: "Post",
-      tableName: "Posts",
-      timestamps: true,
-      createdAt: "created_at",
-      updatedAt: "updated_at",
-    }
-  );
+  @ForeignKey(() => User)
+  @Column({ type: DataType.UUID, allowNull: false })
+  declare author_id: string;
 
-  return Post;
-};
+  @Column({ type: DataType.STRING, allowNull: false })
+  declare title: string;
+
+  @Column({ type: DataType.TEXT, allowNull: false })
+  declare content: string;
+
+  @BelongsTo(() => Group, 'group_id')
+  declare group: Group;
+
+  @BelongsTo(() => User, 'author_id')
+  declare author: User;
+
+  @HasMany(() => Comment, 'post_id')
+  declare comments: Comment[];
+}
