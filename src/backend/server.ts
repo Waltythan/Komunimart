@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import bcrypt from 'bcrypt';
 const db = require('../../models');
 const { User } = db;
 const dbConfig = require('../../config/config.json').development;
@@ -13,19 +14,51 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Register route
-app.post('/auth/register', async (req: any, res: any) => {
+// Register route dengan hashing password
+app.post('/auth/register', async (req: Request, res: Response) => {
   const { uname, email, password } = req.body;
 
   if (!uname || !email || !password) {
-    return res.status(400).json({ message: 'All fields are required.' });
+    res.status(400).json({ message: 'All fields are required.' });
+    return;
+  }
+  
+  // Email validation using regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    res.status(400).json({ message: 'Please enter a valid email address.' });
+    return;
+  }
+  
+  // Username must be at least 3 characters
+  if (uname.length < 3) {
+    res.status(400).json({ message: 'Username must be at least 3 characters long.' });
+    return;
   }
 
   try {
+    // Check if username already exists
+    const existingUsername = await User.findOne({ where: { uname } });
+    if (existingUsername) {
+      res.status(400).json({ message: 'Username already taken.' });
+      return;
+    }
+    
+    // Check if email already exists
+    const existingEmail = await User.findOne({ where: { email } });
+    if (existingEmail) {
+      res.status(400).json({ message: 'Email already registered.' });
+      return;
+    }
+
+    // Hash password before storing
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
     const newUser = await User.create({
       uname,
       email,
-      password, // plain text for now
+      password: hashedPassword, // Store hashed password
     });
 
     console.log('✅ User registered:', {
@@ -51,25 +84,49 @@ app.post('/auth/register', async (req: any, res: any) => {
   }
 });
 
-// Login route (optional for future use)
-app.post('/auth/login', async (req: any, res: any) => {
-  const { uname, password } = req.body;
+// Login route
+app.post('/auth/login', async (req: Request, res: Response) => {
+  const { uname, email, password } = req.body;
+  
+  if (!password) {
+    res.status(400).json({ message: 'Password is required.' });
+    return;
+  }
 
-  if (!uname || !password) {
-    return res.status(400).json({ message: 'Username and password are required.' });
+  if (!uname && !email) {
+    res.status(400).json({ message: 'Username or email is required.' });
+    return;
   }
 
   try {
-    const user = await User.findOne({ where: { uname } });
-
+    // Find user by email or username
+    let user;
+    if (email) {
+      user = await User.findOne({ where: { email } });
+    } else if (uname) {
+      user = await User.findOne({ where: { uname } });
+    }
+    
     if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
+      res.status(401).json({ message: 'Invalid credentials.' });
+      return;
     }
-
-    if (user.password !== password) {
-      return res.status(401).json({ message: 'Incorrect password.' });
+    
+    // Compare password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
+      res.status(401).json({ message: 'Invalid credentials.' });
+      return;
     }
-
+    
+    console.log('✅ Login successful:', {
+      id: user.user_id,
+      uname: user.uname,
+      email: user.email,
+    });
+    
+    // Return user data
     res.status(200).json({
       message: 'Login successful.',
       user: {
@@ -77,12 +134,14 @@ app.post('/auth/login', async (req: any, res: any) => {
         uname: user.uname,
         email: user.email,
         role: user.role,
-      },
+      }
     });
   } catch (err) {
-    console.error('❌ Login error:', err);
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ message: 'Login failed.', error: errorMessage });
+    console.error('❌ Error during login:', err);
+    res.status(500).json({
+      message: 'Error during login',
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 });
 
