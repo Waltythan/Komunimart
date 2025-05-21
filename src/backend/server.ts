@@ -8,6 +8,7 @@ import groupRoutes from './routes/groups';
 import postRoutes from './routes/posts';
 import { upload, getImageUrl } from './utils/fileUpload';
 import path from 'path';
+import { generateToken } from './utils/jwt_helper';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -121,6 +122,9 @@ app.post('/auth/login', async (req: Request, res: Response) => {
       res.status(401).json({ message: 'Invalid credentials.' });
       return;
     }
+
+    const token = generateToken(user.user_id);
+    console.log('✅ Generated token:', token);
     
     console.log('✅ Login successful:', {
       id: user.user_id,
@@ -131,6 +135,7 @@ app.post('/auth/login', async (req: Request, res: Response) => {
     // Return user data
     res.status(200).json({
       message: 'Login successful.',
+      token,
       user: {
         id: user.user_id,
         uname: user.uname,
