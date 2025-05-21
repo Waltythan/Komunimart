@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/ProfilePage.css';
 import '../styles/common.css';
+import {clearSessionData } from '../../services/authServices';
 
 const ProfilePage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -76,6 +77,13 @@ const ProfilePage: React.FC = () => {
     
     fetchUserData();
   }, []);
+
+  //  Gw taro handler logout sessionnya disini, karena gw mikirnya nnti logoutnya antara dsini ato navbar
+  const handleLogout = () => {
+    clearSessionData();
+    window.location.href = '/';
+  };
+
   return (
     <div className="profile-container">
       <h2>My Profile</h2>
