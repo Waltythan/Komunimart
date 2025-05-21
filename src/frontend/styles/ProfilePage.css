@@ -1,0 +1,65 @@
+/* src/pages/styles/ProfilePage.css */
+.profile-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.profile-info-section {
+  background-color: #f5f5f5;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-info-section p {
+  margin: 8px 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.action-buttons {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.update-button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.update-button:hover {
+  background-color: #2980b9;
+}
+
+.update-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+/* Enhance existing profile picture styles */
+.profile-picture-section {
+  margin: 30px 0;
+}
+
+.profile-picture-container {
+  margin-bottom: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file-input-label {
+  background-color: #3498db;
+  color: white;
+  transition: background-color 0.2s;
+}
+
+.file-input-label:hover {
+  background-color: #2980b9;
+}
