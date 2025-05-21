@@ -1,8 +1,9 @@
 // src/pages/pages/ProfilePage.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/ProfilePage.css';
 import '../styles/common.css';
+import {clearSessionData } from '../../services/authServices';
 
 const ProfilePage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -46,6 +47,11 @@ const ProfilePage: React.FC = () => {
     } catch (err: any) {
       alert(`Error: ${err.message}`);
     }
+  };
+  
+  const handleLogout = () => {
+    clearSessionData();  // Clear session
+    window.location.href = '/login';  // Back to login
   };
 
   return (

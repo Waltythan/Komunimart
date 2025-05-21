@@ -2,36 +2,35 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/AuthForm.css';
+import { storeSessionData } from '../../services/authServices';
 
 export default function LoginPage() {
-  const [identifier, setIdentifier] = useState(''); // bisa email atau username
+  const [uname, setUname] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = async () => {
     try {
-      // Deteksi apakah input berupa email atau username
-      const isEmail = identifier.includes('@');
-      
       const res = await fetch('http://localhost:3000/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // Kirim field yang sesuai berdasarkan input
-          ...(isEmail ? { email: identifier } : { uname: identifier }),
-          password
-        }),
+        body: JSON.stringify({ uname, password }),
       });
+
+      const data = await res.json();
 
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || 'Login failed');
       }
 
-      const data = await res.json();
+      console.log('Received data:', data);
+      storeSessionData(data.token); // Store the token in sessionStorage
+      
       console.log('✅ Login successful:', data);
       alert(`Welcome, ${data.user.uname}!`);
-      navigate('/groups');
+      navigate('/groups'); // TODO: Create group page
     } catch (err: any) {
       alert('❌ ' + err.message);
     }
@@ -42,14 +41,12 @@ export default function LoginPage() {
       <h1>Komunimart</h1>
       <input
         type="text"
-        placeholder="Email or Username"
-        value={identifier}
-        onChange={(e) => setIdentifier(e.target.value)}
+        placeholder="Uname"
+        onChange={(e) => setUname(e.target.value)}
       />
       <input
         type="password"
         placeholder="Password"
-        value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
       <button onClick={handleLogin}>Login</button>
