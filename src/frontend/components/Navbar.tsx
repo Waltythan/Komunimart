@@ -1,5 +1,5 @@
 // src/frontend/components/Navbar.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Navbar.css';
 import { clearSessionData } from '../../services/authServices';
@@ -11,6 +11,8 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
   const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const handleLogout = () => {
     clearSessionData();
@@ -23,20 +25,85 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
   return (
     <header className="main-header">
       <div className="header-left">
-        <h1 className="app-title" onClick={() => navigate('/groups')}>{title}</h1>
-        {subtitle && <p className="header-subtitle">{subtitle}</p>}
+        <h1 className="app-title" onClick={() => navigate('/groups')}>
+          {title}
+        </h1>
+        <div className="search-container">
+          <input 
+            type="text" 
+            className="search-input"
+            placeholder="Search Komunimart"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button className="search-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+            </svg>
+          </button>
+        </div>
       </div>
-      <div className="header-right">
+      
+      <div className="header-center">
         <nav className="main-nav">
-          <Link to="/groups" className="nav-link">Groups</Link>
-          <div className="profile-menu">
-            <button className="profile-button">Profile</button>
-            <div className="profile-dropdown">
-              <Link to="/profile" className="dropdown-item">My Profile</Link>
-              <button onClick={handleLogout} className="dropdown-item">Logout</button>
-            </div>
-          </div>
+          <Link to="/groups" className="nav-tab">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L8 2.207l6.646 6.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z"/>
+              <path d="m8 3.293 6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293l6-6Z"/>
+            </svg>
+          </Link>
+          <Link to="/groups" className="nav-tab">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M9.669.864 8 0 6.331.864l-1.858.282-.842 1.68-1.337 1.32L2.6 6l-.306 1.854 1.337 1.32.842 1.68 1.858.282L8 12l1.669-.864 1.858-.282.842-1.68 1.337-1.32L13.4 6l.306-1.854-1.337-1.32-.842-1.68L9.669.864zm1.196 1.193.684 1.365 1.086 1.072L12.387 6l.248 1.506-1.086 1.072-.684 1.365-1.51.229L8 10.874l-1.355-.702-1.51-.229-.684-1.365-1.086-1.072L3.614 6l-.25-1.506 1.087-1.072.684-1.365 1.51-.229L8 1.126l1.356.702 1.509.229z"/>
+              <path d="M4 11.794V16l4-1 4 1v-4.206l-2.018.306L8 13.126 6.018 12.1 4 11.794z"/>
+            </svg>
+          </Link>
         </nav>
+      </div>
+
+      <div className="header-right">
+        <div className="nav-actions">
+          <button className="action-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/>
+            </svg>
+          </button>
+          
+          <div className="profile-menu">
+            <button 
+              className="profile-button"
+              onClick={() => setShowDropdown(!showDropdown)}
+            >
+              <img 
+                src="https://via.placeholder.com/40" 
+                alt="Profile" 
+                className="profile-image"
+              />
+            </button>
+            {showDropdown && (
+              <div className="profile-dropdown">
+                <Link to="/profile" className="dropdown-item">
+                  <div className="dropdown-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                    </svg>
+                  </div>
+                  <span>My Profile</span>
+                </Link>
+                <hr className="dropdown-divider" />
+                <button onClick={handleLogout} className="dropdown-item">
+                  <div className="dropdown-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                      <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                    </svg>
+                  </div>
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </header>
   );
