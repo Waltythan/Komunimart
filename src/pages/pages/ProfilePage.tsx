@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 // src/pages/pages/ProfilePage.tsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -96,4 +94,3 @@ const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
->>>>>>> Feat/Session
