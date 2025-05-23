@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import '../styles/PostDetail.css';
 import '../styles/common.css';
 import { getCurrentUserId } from '../../services/userServices';
@@ -12,6 +12,7 @@ interface Comment {
   parent_id?: string | null; // Untuk reply
   author_name?: string;     // opsional, jika backend mengirim nama user
   image_url?: string | null; // URL gambar (opsional)
+  created_at?: string;      // timestamp
 }
 
 const PostDetail: React.FC = () => {
@@ -20,6 +21,7 @@ const PostDetail: React.FC = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [replyToName, setReplyToName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -29,6 +31,9 @@ const PostDetail: React.FC = () => {
   // Comment like state
   const [commentLikes, setCommentLikes] = useState<Record<string, number>>({});
   const [commentLiked, setCommentLiked] = useState<Record<string, boolean>>({});
+  // For File upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
   // For simplicity, hardcode user_id (replace with auth context in production)
   const userId = getCurrentUserId();
 
@@ -38,9 +43,24 @@ const PostDetail: React.FC = () => {
       setLoading(true);
       try {
         const postRes = await fetch(`http://localhost:3000/posts/${postId}`);
-        if (postRes.ok) setPost(await postRes.json());
+        if (postRes.ok) {
+          const postData = await postRes.json();
+          // Add placeholder author name for demo
+          postData.author_name = `User ${postData.author_id.substring(0, 5)}`;
+          setPost(postData);
+        }
+        
         const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`);
-        if (commentRes.ok) setComments(await commentRes.json());
+        if (commentRes.ok) {
+          const commentData = await commentRes.json();
+          // Add placeholder author names for comments
+          const enhancedComments = commentData.map((comment: Comment) => ({
+            ...comment,
+            author_name: `User ${comment.user_id.substring(0, 5)}`,
+            created_at: comment.created_at || new Date().toISOString(),
+          }));
+          setComments(enhancedComments);
+        }
       } finally {
         setLoading(false);
       }
@@ -108,6 +128,25 @@ const PostDetail: React.FC = () => {
     }
   };
 
+  // Open file picker
+  const handleAttachmentClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   // Submit comment or reply
   const handleAddComment = async () => {
     if (!newComment.trim() && !selectedImage) return;
@@ -137,12 +176,22 @@ const PostDetail: React.FC = () => {
       
       setNewComment('');
       setReplyTo(null);
+      setReplyToName(null);
       setSelectedImage(null);
       setImagePreview(null);
       
       // Refresh comments
       const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`);
-      if (commentRes.ok) setComments(await commentRes.json());
+      if (commentRes.ok) {
+        const commentData = await commentRes.json();
+        // Add placeholder author names
+        const enhancedComments = commentData.map((comment: Comment) => ({
+          ...comment,
+          author_name: `User ${comment.user_id.substring(0, 5)}`,
+          created_at: comment.created_at || new Date().toISOString(),
+        }));
+        setComments(enhancedComments);
+      }
     } catch (err) {
       alert('Gagal menambah komentar');
     }
@@ -162,75 +211,110 @@ const PostDetail: React.FC = () => {
         })
       });
       if (!res.ok) {
-        let err;
-        try {
-          // Try to parse as JSON, but fallback to text if not JSON
-          const contentType = res.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            err = await res.json();
-          } else {
-            err = { error: await res.text() };
-          }
-        } catch (parseErr) {
-          err = { error: 'Unknown error (not JSON)' };
-        }
-        console.error('Like API error:', err);
-        alert('Gagal melakukan like/unlike: ' + (err.error || res.status));
+        console.error('Like API error:', await res.text());
         return;
       }
-      // After like/unlike, fetch the latest count from the database
+      
+      // Optimistic update
+      setPostLiked(!postLiked);
+      setPostLikes(prevLikes => postLiked ? prevLikes - 1 : prevLikes + 1);
+      
+      // After like/unlike, fetch the latest count from the database for accuracy
       const countRes = await fetch(`http://localhost:3000/posts/likes/count?likeable_id=${postId}&likeable_type=Post&user_id=${userId}`);
-      if (!countRes.ok) {
-        let err;
-        try {
-          const contentType = countRes.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            err = await countRes.json();
-          } else {
-            err = { error: await countRes.text() };
-          }
-        } catch (parseErr) {
-          err = { error: 'Unknown error (not JSON)' };
-        }
-        console.error('Like count API error:', err);
-        alert('Gagal mengambil jumlah like: ' + (err.error || countRes.status));
-        return;
+      if (countRes.ok) {
+        const data = await countRes.json();
+        setPostLikes(data.count || 0);
+        setPostLiked(data.likedByUser || false);
       }
-      const data = await countRes.json();
-      setPostLikes(data.count || 0);
-      setPostLiked(data.likedByUser || false);
-      // Debug log
-      console.debug('Like count response:', data);
     } catch (e) {
       console.error('Unexpected error in handleLikePost:', e);
-      alert('Terjadi error saat like/unlike. Lihat console untuk detail.');
     }
   };
 
+  // Handle reply to comment
+  const handleReply = (commentId: string, authorName: string | undefined) => {
+    setReplyTo(commentId);
+    setReplyToName(authorName || `User ${commentId.substring(0, 5)}`);
+    
+    // Focus the textarea
+    if (commentInputRef.current) {
+      commentInputRef.current.focus();
+    }
+  };
+
+  // Cancel reply
+  const cancelReply = () => {
+    setReplyTo(null);
+    setReplyToName(null);
+  };
+
   // Render komentar dan reply secara nested
-  const renderComments = (parentId: string | null = null, level = 0) =>
-    comments
-      .filter((c) => c.parent_id === parentId)
-      .map((comment) => (
-        <div key={comment.comment_id} className="comment-item" style={{ marginLeft: level * 24 }}>
-          <strong>{comment.author_name || `User #${comment.user_id}`}</strong>: {comment.text}
-          {/* Like button for comment */}
-          <button style={{ marginLeft: 8 }} onClick={() => handleLikeComment(comment.comment_id)}>
-            {commentLiked[comment.comment_id] ? 'Unlike' : 'Like'} ({commentLikes[comment.comment_id] || 0})
-          </button>
-          {comment.image_url && (
-            <div className="comment-image">
-              <img 
-                src={`http://localhost:3000/uploads/comments/${comment.image_url}`}
-                alt="Comment attachment"
-                style={{ maxWidth: '200px', marginTop: '8px' }}
-              />
+  const renderComments = (parentId: string | null = null, level = 0) => {
+    const filteredComments = comments.filter((c) => c.parent_id === parentId);
+    
+    return filteredComments.map((comment) => (
+      <div 
+        key={comment.comment_id} 
+        className={`comment-item ${level > 0 ? 'reply-comment' : ''}`} 
+        style={{ marginLeft: level * 24 }}
+      >
+        <div className="comment-header">
+          <div className="comment-author">
+            <div className="author-avatar">
+              <span>{comment.author_name?.charAt(0).toUpperCase() || 'U'}</span>
             </div>
-          )}
-          <button onClick={() => setReplyTo(comment.comment_id)}>Balas</button>
-          {renderComments(comment.comment_id, level + 1)}
+            <div className="comment-content">
+              <div className="comment-bubble">
+                <div className="author-name">{comment.author_name || `User #${comment.user_id}`}</div>
+                <div className="comment-text">{comment.text}</div>
+                
+                {comment.image_url && (
+                  <div className="comment-image">
+                    <img 
+                      src={`http://localhost:3000/uploads/comments/${comment.image_url}`}
+                      alt="Comment attachment"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://via.placeholder.com/200x150?text=Image+Not+Found";
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div className="comment-actions">
+                <button 
+                  className={`action-link ${commentLiked[comment.comment_id] ? 'active' : ''}`}
+                  onClick={() => handleLikeComment(comment.comment_id)}
+                >
+                  Like
+                </button>
+                <button 
+                  className="action-link"
+                  onClick={() => handleReply(comment.comment_id, comment.author_name)}
+                >
+                  Reply
+                </button>
+                <span className="comment-time">
+                  {formatDate(comment.created_at || new Date().toISOString())}
+                </span>
+                {commentLikes[comment.comment_id] > 0 && (
+                  <span className="like-count">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2.144 2.144 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a9.84 9.84 0 0 0-.443.05 9.365 9.365 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111L8.864.046z"/>
+                    </svg>
+                    {commentLikes[comment.comment_id] || 0}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      ));
+        
+        {/* Render nested replies */}
+        {renderComments(comment.comment_id, level + 1)}
+      </div>
+    ));
+  };
 
   // Like comment handler (with count and error handling)
   const handleLikeComment = async (commentId: string) => {
@@ -240,6 +324,13 @@ const PostDetail: React.FC = () => {
     }
     const liked = commentLiked[commentId];
     try {
+      // Optimistic update
+      setCommentLiked((prev) => ({ ...prev, [commentId]: !liked }));
+      setCommentLikes((prev) => ({ 
+        ...prev, 
+        [commentId]: liked ? Math.max(0, (prev[commentId] || 1) - 1) : (prev[commentId] || 0) + 1 
+      }));
+      
       const res = await fetch(`http://localhost:3000/posts/likes`, {
         method: liked ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -249,103 +340,224 @@ const PostDetail: React.FC = () => {
           likeable_type: 'Comment',
         })
       });
+      
       if (!res.ok) {
-        let err;
-        try {
-          const contentType = res.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            err = await res.json();
-          } else {
-            err = { error: await res.text() };
-          }
-        } catch (parseErr) {
-          err = { error: 'Unknown error (not JSON)' };
-        }
-        console.error('Comment Like API error:', err);
-        alert('Gagal melakukan like/unlike komentar: ' + (err.error || res.status));
+        console.error('Comment like API error:', await res.text());
+        // Revert optimistic update on failure
+        setCommentLiked((prev) => ({ ...prev, [commentId]: liked }));
+        setCommentLikes((prev) => ({ 
+          ...prev, 
+          [commentId]: liked ? (prev[commentId] || 0) + 1 : Math.max(0, (prev[commentId] || 1) - 1) 
+        }));
         return;
       }
-      // After like/unlike, fetch the latest count from the database
+      
+      // After like/unlike, fetch the latest count from the database for accuracy
       const countRes = await fetch(`http://localhost:3000/posts/likes/count?likeable_id=${commentId}&likeable_type=Comment&user_id=${userId}`);
-      if (!countRes.ok) {
-        let err;
-        try {
-          const contentType = countRes.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            err = await countRes.json();
-          } else {
-            err = { error: await countRes.text() };
-          }
-        } catch (parseErr) {
-          err = { error: 'Unknown error (not JSON)' };
-        }
-        console.error('Comment Like count API error:', err);
-        alert('Gagal mengambil jumlah like komentar: ' + (err.error || countRes.status));
-        return;
+      if (countRes.ok) {
+        const data = await countRes.json();
+        setCommentLikes((prev) => ({ ...prev, [commentId]: data.count || 0 }));
+        setCommentLiked((prev) => ({ ...prev, [commentId]: data.likedByUser || false }));
       }
-      const data = await countRes.json();
-      setCommentLikes((prev) => ({ ...prev, [commentId]: data.count || 0 }));
-      setCommentLiked((prev) => ({ ...prev, [commentId]: data.likedByUser || false }));
-      // Debug log
-      console.debug('Comment like count response:', data);
     } catch (e) {
       console.error('Unexpected error in handleLikeComment:', e);
-      alert('Terjadi error saat like/unlike komentar. Lihat console untuk detail.');
+      // Revert optimistic update on error
+      setCommentLiked((prev) => ({ ...prev, [commentId]: liked }));
+      setCommentLikes((prev) => ({ 
+        ...prev, 
+        [commentId]: liked ? (prev[commentId] || 0) + 1 : Math.max(0, (prev[commentId] || 1) - 1) 
+      }));
     }
   };
 
-  if (loading) return <div>Loading...</div>;  return (
-    <div className="post-detail-container">
-      <div className="post-content-box">
-        <h2 className="post-title">{post?.title || `Judul Post #${postId}`}</h2>
-        <p className="post-author">Oleh: User #{post?.author_id || postId}</p>
-        <p className="post-body">{post?.content || 'Ini adalah isi lengkap dari postingan ini.'}</p>
-        {/* Like button for post */}
-        <button onClick={handleLikePost} style={{ marginBottom: 12 }}>
-          {postLiked ? 'Unlike' : 'Like'} ({postLikes})
-        </button>
-        {post?.image_url && (
-          <div className="post-image">
-            <img 
-              src={`http://localhost:3000/uploads/posts/${post.image_url}`}
-              alt="Post attachment"
-              style={{ maxWidth: '100%', marginTop: '16px' }}
-            />
-          </div>
-        )}
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading post...</p>
       </div>
-      <div className="comment-section">
-        <h3>Komentar</h3>
-        {renderComments()}
-        <div className="comment-form">
-          {replyTo && (
-            <div style={{ marginBottom: 8 }}>
-              Membalas komentar #{replyTo} <button onClick={() => setReplyTo(null)}>Batal</button>
+    );
+  }
+
+  if (!post) {
+    return (
+      <div className="error-container">
+        <div className="error-icon">⚠️</div>
+        <h3>Post Not Found</h3>
+        <p>The post you're looking for could not be found.</p>
+        <Link to="/groups" className="back-button">Back to Groups</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="post-detail-container">
+      <div className="post-card">
+        <div className="post-header">
+          <div className="post-author">
+            <div className="author-avatar">
+              <span>{post.author_name?.charAt(0).toUpperCase() || 'U'}</span>
+            </div>
+            <div className="author-info">
+              <div className="author-name">{post.author_name || `User #${post.author_id}`}</div>
+              <div className="post-time">{formatDate(post.created_at || new Date().toISOString())}</div>
+            </div>
+          </div>
+          <div className="post-options">
+            <button className="options-button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="post-content">
+          <h1 className="post-title">{post.title}</h1>
+          <p className="post-body">{post.content}</p>
+          
+          {post.image_url && (
+            <div className="post-image">
+              <img 
+                src={`http://localhost:3000/uploads/posts/${post.image_url}`}
+                alt={post.title}
+                onError={(e) => {
+                  e.currentTarget.src = "https://via.placeholder.com/600x400?text=Image+Not+Found";
+                }}
+              />
             </div>
           )}
-          <textarea
-            placeholder={replyTo ? 'Tulis balasan...' : 'Tulis komentar...'}
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-          />
-          <div className="form-group">
-            <label>Tambahkan Gambar (Opsional)</label>
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={handleImageChange}
-            />
-            {imagePreview && (
-              <div className="image-preview">
-                <img 
-                  src={imagePreview} 
-                  alt="Comment preview" 
-                  style={{ maxWidth: '100%', maxHeight: '200px' }}
-                />
+          
+          <div className="post-stats">
+            {postLikes > 0 && (
+              <div className="likes-count">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2.144 2.144 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a9.84 9.84 0 0 0-.443.05 9.365 9.365 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111L8.864.046z"/>
+                </svg>
+                {postLikes}
               </div>
             )}
+            <div className="comments-count">
+              {comments.length} comments
+            </div>
           </div>
-          <button onClick={handleAddComment}>Kirim</button>
+          
+          <div className="post-actions-bar">
+            <button 
+              className={`post-action-btn ${postLiked ? 'active' : ''}`} 
+              onClick={handleLikePost}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2.144 2.144 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a9.84 9.84 0 0 0-.443.05 9.365 9.365 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111L8.864.046zM11.5 14.721H8c-.51 0-.863-.069-1.14-.164-.281-.097-.506-.228-.776-.393l-.04-.024c-.555-.339-1.198-.731-2.49-.868-.333-.036-.554-.29-.554-.55V8.72c0-.254.226-.543.62-.65 1.095-.3 1.977-.996 2.614-1.708.635-.71 1.064-1.475 1.238-1.978.243-.7.407-1.768.482-2.85.025-.362.36-.594.667-.518l.262.066c.16.04.258.143.288.255a8.34 8.34 0 0 1-.145 4.725.5.5 0 0 0 .595.644l.003-.001.014-.003.058-.014a8.908 8.908 0 0 1 1.036-.157c.663-.06 1.457-.054 2.11.164.175.058.45.3.57.65.107.308.087.67-.266 1.022l-.353.353.353.354c.043.043.105.141.154.315.048.167.075.37.075.581 0 .212-.027.414-.075.582-.05.174-.111.272-.154.315l-.353.353.353.354c.047.047.109.177.005.488a2.224 2.224 0 0 1-.505.805l-.353.353.353.354c.006.005.041.05.041.17a.866.866 0 0 1-.121.416c-.165.288-.503.56-1.066.56z"/>
+              </svg>
+              <span>{postLiked ? 'Liked' : 'Like'}</span>
+            </button>
+            <button className="post-action-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-2.5a2 2 0 0 0-1.6.8L8 14.333 6.1 11.8a2 2 0 0 0-1.6-.8H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2.5a1 1 0 0 1 .8.4l1.9 2.533a1 1 0 0 0 1.6 0l1.9-2.533a1 1 0 0 1 .8-.4H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                <path d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6zm0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
+              </svg>
+              <span>Comment</span>
+            </button>
+            <button className="post-action-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+              </svg>
+              <span>Share</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="comments-section">
+        <h3 className="comments-title">Comments</h3>
+        
+        <div className="comment-form">
+          <div className="comment-input-container">
+            <div className="avatar-circle">
+              <span>U</span>
+            </div>
+            <div className="comment-input-wrapper">
+              {replyTo && (
+                <div className="replying-to">
+                  Replying to {replyToName}
+                  <button onClick={cancelReply} className="cancel-reply">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+              <textarea
+                ref={commentInputRef}
+                placeholder={replyTo ? "Write a reply..." : "Write a comment..."}
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                className="comment-textarea"
+              />
+              
+              <div className="comment-tools">
+                <div className="comment-tools-left">
+                  <button 
+                    type="button" 
+                    className="attach-button" 
+                    onClick={handleAttachmentClick}
+                    title="Attach an image"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M4.502 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+                      <path d="M14.002 13a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2V5A2 2 0 0 1 2 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-1.998 2zM14 2H4a1 1 0 0 0-1 1h9.002a2 2 0 0 1 2 2v7A1 1 0 0 0 15 11V3a1 1 0 0 0-1-1zM2.002 4a1 1 0 0 0-1 1v8l2.646-2.354a.5.5 0 0 1 .63-.062l2.66 1.773 3.71-3.71a.5.5 0 0 1 .577-.094l1.777 1.947V5a1 1 0 0 0-1-1h-10z"/>
+                    </svg>
+                  </button>
+                  <input 
+                    ref={fileInputRef}
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleImageChange}
+                    className="file-input" 
+                  />
+                </div>
+                <button 
+                  type="button" 
+                  className="send-button"
+                  onClick={handleAddComment}
+                  disabled={!newComment.trim() && !selectedImage}
+                >
+                  Post
+                </button>
+              </div>
+              
+              {imagePreview && (
+                <div className="image-preview">
+                  <img src={imagePreview} alt="Preview" />
+                  <button 
+                    type="button"
+                    className="remove-image"
+                    onClick={() => {
+                      setSelectedImage(null);
+                      setImagePreview(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="comments-list">
+          {comments.length === 0 ? (
+            <div className="no-comments">
+              <p>No comments yet. Be the first to comment!</p>
+            </div>
+          ) : (
+            renderComments()
+          )}
         </div>
       </div>
     </div>

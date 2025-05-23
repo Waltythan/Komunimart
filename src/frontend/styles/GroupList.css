@@ -1,88 +1,306 @@
 /* GroupList.css */
 
 .group-list-page {
-  max-width: 500px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 20px;
-  background-color: #f0f2f5;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.group-header {
+.group-list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #dddfe2;
+  flex-wrap: wrap; /* Allow wrapping on small screens */
+  gap: 16px;
 }
 
-.group-header h2 {
-  font-size: 1.5rem;
-  color: #333;
+.search-filter-container {
+  flex: 1;
+  max-width: 400px;
 }
 
-.group-create-btn {
-  background-color: #1877f2;
-  color: white;
+.search-box {
+  position: relative;
+  width: 100%;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #65676b;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border-radius: 20px;
+  border: none;
+  background-color: #f0f2f5;
+  font-size: 15px;
+  color: #050505;
+}
+
+.search-input:focus {
+  outline: none;
+  background-color: #e4e6eb;
+}
+
+.new-group-btn {
+  display: flex;
+  align-items: center;
   padding: 8px 16px;
   border: none;
   border-radius: 6px;
+  background-color: #1877f2;
+  color: white;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.group-create-btn:hover {
-  background-color: #145fd6;
+.new-group-btn:hover {
+  background-color: #166fe5;
 }
 
-.group-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.new-group-btn svg {
+  margin-right: 8px;
 }
 
-.group-item {
+.group-cards-container {
+  margin-top: 16px;
+}
+
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.group-card {
   background-color: white;
-  padding: 16px;
   border-radius: 8px;
+  overflow: hidden;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.group-item:hover {
-  background-color: #f5f5f5;
+.group-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.group-name {
-  font-size: 1.2rem;
+.group-cover-image {
+  height: 100px;
+  overflow: hidden;
+  background-color: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.group-cover-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.group-cover-placeholder {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e4e6eb;
+  color: #65676b;
+  font-size: 32px;
   font-weight: bold;
 }
 
-.group-desc {
-  color: #555;
-  font-size: 0.95rem;
-  margin-top: 4px;
+.group-card-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
-.group-loading,
-.group-error {
-  text-align: center;
-  margin-top: 50px;
-  font-size: 1.1rem;
-  color: #666;
+.group-name {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #1c1e21;
 }
+
+.group-meta {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  color: #65676b;
+  font-size: 14px;
+}
+
+.group-members {
+  display: flex;
+  align-items: center;
+}
+
+.group-members svg {
+  margin-right: 4px;
+}
+
+.group-description {
+  font-size: 14px;
+  color: #65676b;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.view-group-btn {
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  background-color: #e4e6eb;
+  color: #050505;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.view-group-btn:hover {
+  background-color: #dadde1;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1877f2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 0;
+  color: #65676b;
+  text-align: center;
+}
+
+.error-container svg {
+  color: #ff5252;
+  margin-bottom: 16px;
+  width: 48px;
+  height: 48px;
+}
+
+.retry-btn {
+  margin-top: 16px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #1877f2;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.no-results {
+  text-align: center;
+  padding: 48px 0;
+  color: #65676b;
+}
+
+.no-results svg {
+  color: #65676b;
+  margin-bottom: 16px;
+}
+
+/* Animation for card appearance */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.group-card {
+  animation: fadeInUp 0.3s ease-out forwards;
+}
+
+/* Apply staggered animation to grid items */
+.group-grid > div:nth-child(1) { animation-delay: 0.05s; }
+.group-grid > div:nth-child(2) { animation-delay: 0.1s; }
+.group-grid > div:nth-child(3) { animation-delay: 0.15s; }
+.group-grid > div:nth-child(4) { animation-delay: 0.2s; }
+.group-grid > div:nth-child(5) { animation-delay: 0.25s; }
+.group-grid > div:nth-child(6) { animation-delay: 0.3s; }
 
 /* Responsive */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+  .group-list-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .search-filter-container {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .new-group-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .group-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .group-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
   .group-list-page {
-    padding: 16px;
+    padding: 12px;
   }
-
-  .group-header h2 {
-    font-size: 1.2rem;
-  }
-
-  .group-create-btn {
-    font-size: 0.9rem;
-    padding: 6px 12px;
+  
+  /* Ensure group card content is properly spaced */
+  .group-content {
+    padding: 12px;
   }
 }
