@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Navbar.css';
+import { clearSessionData } from '../../services/authServices';
 
 interface NavbarProps {
   title?: string;
@@ -11,6 +12,11 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
   const navigate = useNavigate();
   
+  const handleLogout = () => {
+    clearSessionData();
+    window.location.href = '/';
+  };
+
   // Hardcoded user id - replace with context/session data later
   const userId = "8f45c368-ec32-4766-bb15-a178aa924a16";
   
@@ -27,7 +33,7 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
             <button className="profile-button">Profile</button>
             <div className="profile-dropdown">
               <Link to="/profile" className="dropdown-item">My Profile</Link>
-              <Link to="/" className="dropdown-item">Logout</Link>
+              <button onClick={handleLogout} className="dropdown-item">Logout</button>
             </div>
           </div>
         </nav>

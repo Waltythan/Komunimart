@@ -78,12 +78,6 @@ const ProfilePage: React.FC = () => {
     fetchUserData();
   }, []);
 
-  //  Gw taro handler logout sessionnya disini, karena gw mikirnya nnti logoutnya antara dsini ato navbar
-  const handleLogout = () => {
-    clearSessionData();
-    window.location.href = '/';
-  };
-
   return (
     <div className="profile-container">
       <h2>My Profile</h2>
