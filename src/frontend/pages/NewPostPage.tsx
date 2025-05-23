@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getCurrentUserId } from '../../services/userServices';
 import '../styles/NewPostPage.css';
 import '../styles/common.css';
 
@@ -25,12 +26,18 @@ const NewPostPage: React.FC = () => {
       return;
     }
 
+    const userId = getCurrentUserId();
+    if (!userId) {
+      alert('User tidak ditemukan. Silakan login ulang.');
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('title', title);
       formData.append('content', content);
       formData.append('group_id', groupId || '');
-      formData.append('user_id', "8f45c368-ec32-4766-bb15-a178aa924a16"); // sementara hardcode user_id
+      formData.append('user_id', userId); // use real user_id
       
       if (selectedImage) {
         formData.append('image', selectedImage);

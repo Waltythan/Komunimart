@@ -4,7 +4,10 @@ import {
   getPostsByGroup,
   getPostById,
   addComment,
-  getCommentsByPost
+  getCommentsByPost,
+  likeItem,
+  unlikeItem,
+  getLikeCount
 } from '../controllers/postController';
 import { upload, getImageUrl } from '../utils/fileUpload';
 import { deleteFile } from '../utils/fileManager';
@@ -52,6 +55,11 @@ router.get('/:postId', getPostById);
 
 // Get all comments for a post
 router.get('/:postId/comments', getCommentsByPost);
+
+// Like endpoints (must be above /:postId route to avoid route collision)
+router.post('/likes', function(req, res) { likeItem(req, res); });
+router.delete('/likes', function(req, res) { unlikeItem(req, res); });
+router.get('/likes/count', function(req, res) { getLikeCount(req, res); });
 
 // Endpoint delete post
 router.delete('/:postId', async (req, res) => {

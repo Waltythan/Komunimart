@@ -19,15 +19,13 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      post_id: {
+      likeable_id: {
         type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: 'Posts',
-          key: 'post_id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        allowNull: false
+      },
+      likeable_type: {
+        type: Sequelize.STRING,
+        allowNull: false
       },
       created_at: {
         type: Sequelize.DATE,

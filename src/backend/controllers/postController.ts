@@ -134,3 +134,52 @@ export const addComment = async (req: Request, res: Response) => {
     // Tidak perlu return setelah response terakhir
   }
 };
+
+// LIKE CONTROLLERS
+export const likeItem = async (req: Request, res: Response) => {
+  try {
+    const { user_id, likeable_id, likeable_type } = req.body;
+    if (!user_id || !likeable_id || !likeable_type) {
+      return res.status(400).json({ error: 'user_id, likeable_id, and likeable_type are required' });
+    }
+    // Prevent duplicate likes
+    const existing = await db.Like.findOne({ where: { user_id, likeable_id, likeable_type } });
+    if (existing) return res.status(409).json({ error: 'Already liked' });
+    const like = await db.Like.create({ user_id, likeable_id, likeable_type });
+    res.status(201).json(like);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to like' });
+  }
+};
+
+export const unlikeItem = async (req: Request, res: Response) => {
+  try {
+    const { user_id, likeable_id, likeable_type } = req.body;
+    if (!user_id || !likeable_id || !likeable_type) {
+      return res.status(400).json({ error: 'user_id, likeable_id, and likeable_type are required' });
+    }
+    const deleted = await db.Like.destroy({ where: { user_id, likeable_id, likeable_type } });
+    if (deleted) return res.json({ message: 'Unliked' });
+    res.status(404).json({ error: 'Like not found' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to unlike' });
+  }
+};
+
+export const getLikeCount = async (req: Request, res: Response) => {
+  try {
+    const { likeable_id, likeable_type, user_id } = req.query;
+    if (!likeable_id || !likeable_type) {
+      return res.status(400).json({ error: 'likeable_id and likeable_type are required' });
+    }
+    const count = await db.Like.count({ where: { likeable_id, likeable_type } });
+    let likedByUser = false;
+    if (user_id) {
+      const like = await db.Like.findOne({ where: { likeable_id, likeable_type, user_id } });
+      likedByUser = !!like;
+    }
+    res.json({ count, likedByUser });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get like count' });
+  }
+};

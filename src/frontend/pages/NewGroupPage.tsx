@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getCurrentUserId } from '../../services/userServices';
 import '../styles/GroupList.css';
 import '../styles/common.css';
 
@@ -24,12 +25,16 @@ const NewGroupPage: React.FC = () => {
       alert('Nama grup wajib diisi');
       return;
     }
-    
+    const userId = getCurrentUserId();
+    if (!userId) {
+      alert('User tidak ditemukan. Silakan login ulang.');
+      return;
+    }
     try {
       const formData = new FormData();
       formData.append('name', name);
       formData.append('description', description);
-      formData.append('created_by', "8f45c368-ec32-4766-bb15-a178aa924a16"); // sementara hardcode user_id
+      formData.append('created_by', userId); // use real user_id
       
       if (selectedImage) {
         formData.append('image', selectedImage);
