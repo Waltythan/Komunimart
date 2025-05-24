@@ -3,8 +3,9 @@ import { verifyToken } from '../utils/jwt_helper';
 // import jwt from 'jsonwebtoken';
 import { UUIDTypes } from 'uuid';
 
-interface JwtPayloadWithUserId {
+interface JwtPayloadWithUserInfo {
     userId: string | UUIDTypes;
+    username: string;
 }
 
 export const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
@@ -20,15 +21,15 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
             res.status(401).json({ message: 'Invalid or expired token' });
         }
         else {
-            // const { userId } = decoded as JwtPayloadWithUserId;
-            const { userId } = decoded as JwtPayloadWithUserId;
+            const { userId, username } = decoded as JwtPayloadWithUserInfo;
 
             // Ensure req.body is defined before setting userId
             if (!req.body) {
                 req.body = {};  // Initialize req.body if it's undefined
             }
-
+            
             req.body.user_id = userId;  // Store the userId in req.body
+            req.body.username = username;  // Store the username in req.body
 
             next(); // Continue to the next middleware or route handler
         }

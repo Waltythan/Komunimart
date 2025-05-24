@@ -1,8 +1,9 @@
 // src/frontend/components/Navbar.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Navbar.css';
 import { clearSessionData } from '../../services/authServices';
+import { getCurrentUsername } from '../../services/userServices';
 
 interface NavbarProps {
   title?: string;
@@ -13,71 +14,57 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [username, setUsername] = useState<string | null>(null);
+    useEffect(() => {
+    const currentUsername = getCurrentUsername();
+    setUsername(currentUsername);
+    console.log("Current username from token:", currentUsername);
+  }, []);
   
   const handleLogout = () => {
     clearSessionData();
     window.location.href = '/';
   };
 
-  // Hardcoded user id - replace with context/session data later
-  const userId = "8f45c368-ec32-4766-bb15-a178aa924a16";
+  // Get first letter of username for profile pic
+  const getInitial = () => {
+    if (username && username.length > 0) {
+      return username.charAt(0).toUpperCase();
+    }
+    return '?';
+  };
   
   return (
     <header className="main-header">
       <div className="header-left">
         <h1 className="app-title" onClick={() => navigate('/groups')}>
           {title}
-        </h1>
-        <div className="search-container">
+        </h1>        <div className="search-container">
           <input 
             type="text" 
             className="search-input"
-            placeholder="Search Komunimart"
+            placeholder="Search groups, users, or topics..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <button className="search-button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+          />          <button className="search-button" aria-label="Search">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
               <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
             </svg>
           </button>
         </div>
       </div>
       
-      <div className="header-center">
-        <nav className="main-nav">
-          <Link to="/groups" className="nav-tab">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L8 2.207l6.646 6.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z"/>
-              <path d="m8 3.293 6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293l6-6Z"/>
-            </svg>
-          </Link>
-          <Link to="/groups" className="nav-tab">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M9.669.864 8 0 6.331.864l-1.858.282-.842 1.68-1.337 1.32L2.6 6l-.306 1.854 1.337 1.32.842 1.68 1.858.282L8 12l1.669-.864 1.858-.282.842-1.68 1.337-1.32L13.4 6l.306-1.854-1.337-1.32-.842-1.68L9.669.864zm1.196 1.193.684 1.365 1.086 1.072L12.387 6l.248 1.506-1.086 1.072-.684 1.365-1.51.229L8 10.874l-1.355-.702-1.51-.229-.684-1.365-1.086-1.072L3.614 6l-.25-1.506 1.087-1.072.684-1.365 1.51-.229L8 1.126l1.356.702 1.509.229z"/>
-              <path d="M4 11.794V16l4-1 4 1v-4.206l-2.018.306L8 13.126 6.018 12.1 4 11.794z"/>
-            </svg>
-          </Link>
-        </nav>
-      </div>
-
       <div className="header-right">
         <div className="nav-actions">
-          <button className="action-button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/>
-            </svg>
-          </button>
-          
           <div className="profile-menu">
+            <div className="username-display">{username || 'User'}</div>
             <button 
               className="profile-button"
               onClick={() => setShowDropdown(!showDropdown)}
-            >              <img 
-                src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFNEU2RUEiLz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeD0iOCIgeT0iOCI+CjxwYXRoIGQ9Ik0xMiAxMkM5Ljc5IDEyIDggMTAuMjEgOCA4UzkuNzkgNDEyIDRTMTQuMjEgNiAxNiA4UzEyIDEwLjIxIDEyIDEyWk0xMiAxNEMyLjY3IDE0IDEgMTUuMzQgMSAxN1YyMEgyM1YxN0MyMyAxNS4zNCAyMi4zMyAxNCAyMSAxNEgxMloiIGZpbGw9IiM2NTY3NkIiLz4KPC9zdmc+Cjwvc3ZnPgo=" 
-                alt="Profile" 
-                className="profile-image"
-              />
+            >
+              <div className="profile-initial-circle">
+                {getInitial()}
+              </div>
             </button>
             {showDropdown && (
               <div className="profile-dropdown">

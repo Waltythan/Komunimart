@@ -121,9 +121,7 @@ app.post('/auth/login', async (req: Request, res: Response) => {
     if (!isPasswordValid) {
       res.status(401).json({ message: 'Invalid credentials.' });
       return;
-    }
-
-    const token = generateToken(user.user_id);
+    }    const token = generateToken(user.user_id, user.uname);
     console.log('✅ Generated token:', token);
     
     console.log('✅ Login successful:', {
