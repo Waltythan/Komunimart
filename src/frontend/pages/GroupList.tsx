@@ -118,7 +118,7 @@ const GroupListPage: React.FC = () => {
                         src={`http://localhost:3000/uploads/groups/${group.image_url}`}
                         alt={group.name}
                         onError={(e) => {
-                          e.currentTarget.src = `https://via.placeholder.com/300x100?text=${group.name}`;
+                          e.currentTarget.src = `data:image/svg+xml;base64,${btoa(`<svg width="300" height="100" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="100" fill="#F0F2F5"/><text x="150" y="55" text-anchor="middle" fill="#65676B" font-family="Arial" font-size="18" font-weight="bold">${group.name}</text></svg>`)}`;
                         }}
                       />
                     </div>

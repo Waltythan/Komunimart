@@ -143,7 +143,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         src={`http://localhost:3000/uploads/groups/${group.image_url}`}
                         alt={group.name}
                         onError={(e) => {
-                          e.currentTarget.src = `https://via.placeholder.com/40?text=${group.name.charAt(0)}`;
+                          e.currentTarget.src = `data:image/svg+xml;base64,${btoa(`<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="20" fill="#E4E6EA"/><text x="20" y="26" text-anchor="middle" fill="#65676B" font-family="Arial" font-size="16" font-weight="bold">${group.name.charAt(0)}</text></svg>`)}`;
                         }}
                       />
                     ) : (

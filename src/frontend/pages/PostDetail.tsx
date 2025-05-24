@@ -7,7 +7,7 @@ import { getCurrentUserId } from '../../services/userServices';
 // Komentar dari backend
 interface Comment {
   comment_id: string;
-  user_id: string;
+  author_id: string;
   text: string;             // backend pakai kolom "text"
   parent_id?: string | null; // Untuk reply
   author_name?: string;     // opsional, jika backend mengirim nama user
@@ -42,21 +42,19 @@ const PostDetail: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const postRes = await fetch(`http://localhost:3000/posts/${postId}`);
-        if (postRes.ok) {
+        const postRes = await fetch(`http://localhost:3000/posts/${postId}`);        if (postRes.ok) {
           const postData = await postRes.json();
           // Add placeholder author name for demo
-          postData.author_name = `User ${postData.author_id.substring(0, 5)}`;
+          postData.author_name = `User ${postData.author_id?.substring(0, 5) || 'Unknown'}`;
           setPost(postData);
         }
-        
-        const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`);
+          const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`);
         if (commentRes.ok) {
           const commentData = await commentRes.json();
           // Add placeholder author names for comments
           const enhancedComments = commentData.map((comment: Comment) => ({
             ...comment,
-            author_name: `User ${comment.user_id.substring(0, 5)}`,
+            author_name: `User ${comment.author_id?.substring(0, 5) || 'Unknown'}`,
             created_at: comment.created_at || new Date().toISOString(),
           }));
           setComments(enhancedComments);
@@ -183,11 +181,10 @@ const PostDetail: React.FC = () => {
       // Refresh comments
       const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`);
       if (commentRes.ok) {
-        const commentData = await commentRes.json();
-        // Add placeholder author names
+        const commentData = await commentRes.json();        // Add placeholder author names
         const enhancedComments = commentData.map((comment: Comment) => ({
           ...comment,
-          author_name: `User ${comment.user_id.substring(0, 5)}`,
+          author_name: `User ${comment.author_id?.substring(0, 5) || 'Unknown'}`,
           created_at: comment.created_at || new Date().toISOString(),
         }));
         setComments(enhancedComments);
@@ -265,7 +262,7 @@ const PostDetail: React.FC = () => {
             </div>
             <div className="comment-content">
               <div className="comment-bubble">
-                <div className="author-name">{comment.author_name || `User #${comment.user_id}`}</div>
+                <div className="author-name">{comment.author_name || `User #${comment.author_id}`}</div>
                 <div className="comment-text">{comment.text}</div>
                 
                 {comment.image_url && (
@@ -274,7 +271,7 @@ const PostDetail: React.FC = () => {
                       src={`http://localhost:3000/uploads/comments/${comment.image_url}`}
                       alt="Comment attachment"
                       onError={(e) => {
-                        e.currentTarget.src = "https://via.placeholder.com/200x150?text=Image+Not+Found";
+                        e.currentTarget.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjRjBGMkY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2NTY3NkIiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiI+SW1hZ2UgTm90IEZvdW5kPC90ZXh0Pgo8L3N2Zz4=";
                       }}
                     />
                   </div>
@@ -422,7 +419,7 @@ const PostDetail: React.FC = () => {
                 src={`http://localhost:3000/uploads/posts/${post.image_url}`}
                 alt={post.title}
                 onError={(e) => {
-                  e.currentTarget.src = "https://via.placeholder.com/600x400?text=Image+Not+Found";
+                  e.currentTarget.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDYwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjBGMkY1Ii8+Cjx0ZXh0IHg9IjMwMCIgeT0iMjEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjU2NzZCIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiPkltYWdlIE5vdCBGb3VuZDwvdGV4dD4KPC9zdmc+";
                 }}
               />
             </div>

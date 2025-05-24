@@ -148,6 +148,7 @@ export const likeItem = async (req: Request, res: Response) => {
     const like = await db.Like.create({ user_id, likeable_id, likeable_type });
     res.status(201).json(like);
   } catch (err) {
+    console.error('likeItem error:', err);
     res.status(500).json({ error: 'Failed to like' });
   }
 };
@@ -180,6 +181,7 @@ export const getLikeCount = async (req: Request, res: Response) => {
     }
     res.json({ count, likedByUser });
   } catch (err) {
+    console.error('getLikeCount error:', err);
     res.status(500).json({ error: 'Failed to get like count' });
   }
 };

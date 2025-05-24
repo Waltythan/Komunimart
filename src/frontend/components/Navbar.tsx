@@ -73,9 +73,8 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
             <button 
               className="profile-button"
               onClick={() => setShowDropdown(!showDropdown)}
-            >
-              <img 
-                src="https://via.placeholder.com/40" 
+            >              <img 
+                src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFNEU2RUEiLz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeD0iOCIgeT0iOCI+CjxwYXRoIGQ9Ik0xMiAxMkM5Ljc5IDEyIDggMTAuMjEgOCA4UzkuNzkgNDEyIDRTMTQuMjEgNiAxNiA4UzEyIDEwLjIxIDEyIDEyWk0xMiAxNEMyLjY3IDE0IDEgMTUuMzQgMSAxN1YyMEgyM1YxN0MyMyAxNS4zNCAyMi4zMyAxNCAyMSAxNEgxMloiIGZpbGw9IiM2NTY3NkIiLz4KPC9zdmc+Cjwvc3ZnPgo=" 
                 alt="Profile" 
                 className="profile-image"
               />

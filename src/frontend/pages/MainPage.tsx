@@ -113,7 +113,7 @@ const MainPage: React.FC = () => {
               src={`http://localhost:3000/uploads/groups/${group.image_url}`} 
               alt={group.name}
               onError={(e) => {
-                e.currentTarget.src = `https://via.placeholder.com/800x200?text=${group.name}`;
+                e.currentTarget.src = `data:image/svg+xml;base64,${btoa(`<svg width="800" height="200" viewBox="0 0 800 200" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="200" fill="#F0F2F5"/><text x="400" y="110" text-anchor="middle" fill="#65676B" font-family="Arial" font-size="24" font-weight="bold">${group.name}</text></svg>`)}`;
               }}
             />
           ) : (
@@ -251,7 +251,7 @@ const MainPage: React.FC = () => {
                           src={`http://localhost:3000/uploads/posts/${post.image_url}`}
                           alt={post.title}
                           onError={(e) => {
-                            e.currentTarget.src = "https://via.placeholder.com/600x400?text=Image+Not+Found";
+                            e.currentTarget.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDYwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjBGMkY1Ii8+Cjx0ZXh0IHg9IjMwMCIgeT0iMjEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjU2NzZCIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiPkltYWdlIE5vdCBGb3VuZDwvdGV4dD4KPC9zdmc+";
                           }}
                         />
                       </div>

@@ -11,9 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
-config/config.json
-config/*.json
-!config/config.example.json
+config/
 
 # Editor directories and files
 .vscode/*
