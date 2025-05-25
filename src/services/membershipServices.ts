@@ -210,6 +210,18 @@ export const promoteMemberToAdmin = async (groupId: string, userId: string): Pro
   }
 };
 
+// Function to get member count of a group
+export const getGroupMemberCount = async (groupId: string): Promise<number> => {
+  try {
+    // Use the existing getGroupMembers function and count the results
+    const members = await getGroupMembers(groupId);
+    return members.length;
+  } catch (error) {
+    console.error('Error getting group member count:', error);
+    return 0;
+  }
+};
+
 // Function to remove a member from group
 export const removeMemberFromGroup = async (groupId: string, userId: string): Promise<boolean> => {
   try {

@@ -3,6 +3,7 @@ import {
   joinGroup, 
   leaveGroup, 
   getGroupMembers, 
+  getGroupMemberCount,
   checkMembership,
   getUserGroups,
   promoteMember,
@@ -17,6 +18,9 @@ router.post('/join', authenticateJWT, joinGroup);
 
 // Leave a group
 router.post('/leave', authenticateJWT, leaveGroup);
+
+// Get member count of a group (optimized) - must come before the general route
+router.get('/group/:groupId/count', getGroupMemberCount);
 
 // Get all members of a group
 router.get('/group/:groupId', getGroupMembers);

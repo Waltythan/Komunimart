@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { getGroupMemberCount } from '../../services/membershipServices';
 import '../styles/MainPage.css';
 
 interface Post {
@@ -41,11 +42,12 @@ const MainPage: React.FC = () => {
         if (groupRes.ok) {
           const groups = await groupRes.json();
           const currentGroup = groups.find((g: any) => String(g.group_id) === groupId);
-          
-          if (currentGroup) {
+            if (currentGroup) {
+            // Fetch actual member count for this group
+            const memberCount = await getGroupMemberCount(currentGroup.group_id);
             setGroup({
               ...currentGroup,
-              member_count: Math.floor(Math.random() * 100) + 5 // Placeholder for demo
+              member_count: memberCount
             });
           } else {
             setError("Group not found");

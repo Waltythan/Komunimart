@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getGroupMemberCount } from '../../services/membershipServices';
 import '../styles/GroupList.css';
 import '../styles/common.css';
 
@@ -24,12 +25,16 @@ const GroupListPage: React.FC = () => {
         const res = await fetch('http://localhost:3000/groups');
         if (!res.ok) throw new Error('Failed to fetch groups');
         const data = await res.json();
-        
-        // Add fake member count for UI purposes
-        const enhancedData = data.map((group: Group, index: number) => ({
-          ...group,
-          member_count: Math.floor(Math.random() * 100) + 1 // Random value for demo
-        }));
+          // Fetch actual member count for each group
+        const enhancedData = await Promise.all(
+          data.map(async (group: Group) => {
+            const memberCount = await getGroupMemberCount(group.group_id);
+            return {
+              ...group,
+              member_count: memberCount
+            };
+          })
+        );
         
         setGroups(enhancedData);
       } catch (err: any) {

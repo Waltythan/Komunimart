@@ -339,3 +339,27 @@ export const removeMember = async (req: Request, res: Response): Promise<void> =
     res.status(500).json({ error: 'Failed to remove member' });
   }
 };
+
+// Get the count of members in a group (optimized)
+export const getGroupMemberCount = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { groupId } = req.params;
+    
+    // Check if group exists
+    const group = await db.Group.findByPk(groupId);
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+    
+    // Count memberships for this group (more efficient than fetching all)
+    const memberCount = await db.GroupMembership.count({
+      where: { group_id: groupId }
+    });
+    
+    res.status(200).json({ count: memberCount });
+  } catch (err) {
+    console.error('Error fetching group member count:', err);
+    res.status(500).json({ error: 'Failed to fetch group member count' });
+  }
+};
