@@ -532,6 +532,79 @@
   margin-top: 16px;
 }
 
+/* Restricted content styling */
+.restricted-content {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.restricted-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.restricted-header h2 {
+  font-size: 1.6rem;
+  margin: 0;
+  color: #1877f2;
+}
+
+.restricted-header .back-btn {
+  color: #1877f2;
+  text-decoration: none;
+  font-size: 0.9rem;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.restricted-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+  background-color: #f0f2f5;
+  border-radius: 8px;
+}
+
+.lock-icon {
+  color: #65676b;
+  margin-bottom: 20px;
+}
+
+.restricted-message h3 {
+  color: #1c1e21;
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.restricted-message p {
+  color: #65676b;
+  max-width: 400px;
+  margin-bottom: 24px;
+}
+
+.join-group-btn {
+  background-color: #1877f2;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.join-group-btn:hover {
+  background-color: #166fe5;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }

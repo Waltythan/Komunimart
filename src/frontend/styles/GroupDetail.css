@@ -1,7 +1,7 @@
 /* GroupDetail.css */
 
 .group-detail-container {
-  max-width: 800px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 24px;
   background-color: #f0f2f5;
@@ -24,7 +24,14 @@
 
 .group-header p {
   color: #555;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.group-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
 }
 
 .group-header button {
@@ -38,6 +45,12 @@
 
 .group-header button:hover {
   background-color: #145fd6;
+}
+
+.group-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
 }
 
 .group-section {
@@ -55,46 +68,128 @@
   padding-bottom: 6px;
 }
 
-.group-post {
-  padding: 12px 0;
-  border-bottom: 1px solid #eee;
+.post-actions {
+  margin-bottom: 16px;
 }
 
-.group-post h3 {
-  margin: 0;
-  font-size: 1.1rem;
+.post-create-btn {
+  display: inline-block;
+  background-color: #42b72a;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.post-create-btn:hover {
+  background-color: #36a420;
+}
+
+.post-item {
+  background-color: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+}
+
+.post-title {
+  margin: 0 0 8px 0;
+  font-size: 1.2rem;
   color: #333;
 }
 
-.group-post p {
-  margin: 6px 0;
-  color: #444;
+.post-author {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
 }
 
-.group-post span {
-  font-size: 0.85rem;
-  color: #777;
+.post-content {
+  margin: 10px 0;
+  color: #444;
+  line-height: 1.4;
+}
+
+.post-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.post-link {
+  color: #1877f2;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.post-link:hover {
+  text-decoration: underline;
 }
 
 .no-posts {
   color: #777;
   font-style: italic;
+  padding: 20px;
+  text-align: center;
+  background-color: #f9f9f9;
+  border-radius: 8px;
 }
 
-.group-comment {
-  padding: 10px 0;
-  border-bottom: 1px solid #eaeaea;
+.group-access-restricted {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.group-comment strong {
-  color: #333;
+.restricted-message {
+  max-width: 450px;
+  margin: 0 auto;
 }
 
-.comment-form {
-  margin-top: 16px;
+.restricted-message h3 {
+  color: #1877f2;
+  margin-bottom: 12px;
+}
+
+.restricted-message p {
+  color: #666;
+  line-height: 1.5;
+}
+
+.loading-spinner {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 1.2rem;
+  color: #777;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 20px auto;
+  max-width: 600px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .group-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .group-detail-container {
+    padding: 16px;
+  }
 }
 
 .comment-form textarea {

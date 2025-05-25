@@ -7,7 +7,9 @@ import {
   getCommentsByPost,
   likeItem,
   unlikeItem,
-  getLikeCount
+  getLikeCount,
+  deletePost,
+  deleteComment
 } from '../controllers/postController';
 import { upload, getImageUrl } from '../utils/fileUpload';
 import { deleteFile } from '../utils/fileManager';
@@ -85,5 +87,11 @@ router.delete('/:postId', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete post' });
   }
 });
+
+// Delete post with admin/author check
+router.delete('/admin/:postId', deletePost);
+
+// Delete comment with admin/author check
+router.delete('/comments/:commentId', deleteComment);
 
 export default router;

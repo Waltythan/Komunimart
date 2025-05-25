@@ -5,6 +5,7 @@ import {
 import { Post } from './Post';
 import { Comment } from './Comment';
 import { Group } from './Group';
+import { GroupMembership } from './GroupMembership';
 
 @Table({
   tableName: 'Users', timestamps: false
@@ -55,9 +56,11 @@ export class User extends Model<User> {
 
   @HasMany(() => Post, 'author_id')
   declare posts: Post[];
-
   @HasMany(() => Comment, 'author_id')
   declare comments: Comment[];
+  
+  @HasMany(() => GroupMembership, 'user_id')
+  declare memberships: GroupMembership[];
 
   @Column({ type: DataType.STRING, allowNull: true })
   declare profile_pic: string | null;

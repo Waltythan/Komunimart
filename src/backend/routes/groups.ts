@@ -5,7 +5,8 @@ import { upload, getImageUrl } from '../utils/fileUpload';
 import {
   createGroup,
   getGroups,
-  getGroupById
+  getGroupById,
+  deleteGroup
 } from '../controllers/groupController';
 import { deleteFile } from '../utils/fileManager';
 
@@ -26,6 +27,13 @@ router.post('/', upload.single('image'), async (req, res) => {
       description,
       created_by,
       image_url: req.file ? req.file.filename : null
+    });
+    
+    // Automatically add the creator as an admin member
+    await db.GroupMembership.create({
+      user_id: created_by,
+      group_id: group.group_id,
+      role: 'admin'
     });
     
     res.status(201).json({
@@ -77,8 +85,10 @@ router.put('/:groupId', upload.single('image'), async (req, res) => {
     });
   } catch (err) {
     console.error('Error updating group:', err);
-    res.status(500).json({ error: 'Failed to update group' });
-  }
+    res.status(500).json({ error: 'Failed to update group' });  }
 });
+
+// Delete a group (admin only)
+router.delete('/:groupId', deleteGroup);
 
 export default router;

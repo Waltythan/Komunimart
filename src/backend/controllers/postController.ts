@@ -91,9 +91,30 @@ export const getCommentsByPost = async (req: Request, res: Response) => {
   try {
     const comments = await db.Comment.findAll({
       where: { post_id: req.params.postId },
+      include: [
+        {
+          model: db.User,
+          as: 'author',
+          attributes: ['user_id', 'uname', 'profile_pic']
+        }
+      ],
       order: [['created_at', 'ASC']],
     });
-    res.json(comments);
+    
+    // Process comments to include proper image URLs
+    const processedComments = comments.map((comment: any) => {
+      const commentData = comment.toJSON();
+      return {
+        ...commentData,
+        image_url: getImageUrl(commentData.image_url, 'comment'),
+        author: {
+          ...commentData.author,
+          profile_pic: getImageUrl(commentData.author.profile_pic, 'profile')
+        }
+      };
+    });
+    
+    res.json(processedComments);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch comments' });
   }
@@ -183,5 +204,153 @@ export const getLikeCount = async (req: Request, res: Response) => {
   } catch (err) {
     console.error('getLikeCount error:', err);
     res.status(500).json({ error: 'Failed to get like count' });
+  }
+};
+
+// Delete a post (admin or author only)
+export const deletePost = async (req: Request, res: Response) => {
+  try {
+    const { postId } = req.params;
+    const { deleted_by } = req.body;
+    
+    if (!deleted_by) {
+      res.status(400).json({ error: 'Deleted by user ID is required' });
+      return;
+    }
+    
+    // Find the post
+    const post = await db.Post.findByPk(postId);
+    if (!post) {
+      res.status(404).json({ error: 'Post not found' });
+      return;
+    }
+    
+    // Check if the deleter is the author
+    if (post.author_id === deleted_by) {
+      // Author can delete their own post
+    } else {
+      // Check if the deleter is an admin of the group
+      const membership = await db.GroupMembership.findOne({
+        where: {
+          user_id: deleted_by,
+          group_id: post.group_id
+        }
+      });
+      
+      if (!membership || membership.role !== 'admin') {
+        res.status(403).json({ error: 'Only the author or group admins can delete this post' });
+        return;
+      }
+    }
+    
+    // Delete all related data in order (foreign key constraints)
+    // 1. Delete all likes for comments on this post
+    await db.Like.destroy({
+      where: {
+        likeable_id: {
+          [db.Sequelize.Op.in]: db.Sequelize.literal(`(SELECT comment_id FROM Comments WHERE post_id = '${postId}')`)
+        },
+        likeable_type: 'Comment'
+      }
+    });
+    
+    // 2. Delete all comments
+    await db.Comment.destroy({
+      where: { post_id: postId }
+    });
+    
+    // 3. Delete all likes for this post
+    await db.Like.destroy({
+      where: { 
+        likeable_id: postId,
+        likeable_type: 'Post'
+      }
+    });
+    
+    // 4. Delete all bookmarks for this post
+    await db.Bookmark.destroy({
+      where: { post_id: postId }
+    });
+    
+    // 5. Finally delete the post
+    await post.destroy();
+    
+    res.status(200).json({
+      message: 'Post deleted successfully'
+    });
+  } catch (err) {
+    console.error('Error deleting post:', err);
+    res.status(500).json({ error: 'Failed to delete post' });
+  }
+};
+
+// Delete a comment (admin or author only)
+export const deleteComment = async (req: Request, res: Response) => {
+  try {
+    const { commentId } = req.params;
+    const { deleted_by } = req.body;
+    
+    if (!deleted_by) {
+      res.status(400).json({ error: 'Deleted by user ID is required' });
+      return;
+    }
+    
+    // Find the comment
+    const comment = await db.Comment.findByPk(commentId, {
+      include: [
+        {
+          model: db.Post,
+          as: 'post',
+          attributes: ['group_id']
+        }
+      ]
+    });
+    
+    if (!comment) {
+      res.status(404).json({ error: 'Comment not found' });
+      return;
+    }
+    
+    // Check if the deleter is the author
+    if (comment.author_id === deleted_by) {
+      // Author can delete their own comment
+    } else {
+      // Check if the deleter is an admin of the group
+      const membership = await db.GroupMembership.findOne({
+        where: {
+          user_id: deleted_by,
+          group_id: comment.post.group_id
+        }
+      });
+      
+      if (!membership || membership.role !== 'admin') {
+        res.status(403).json({ error: 'Only the author or group admins can delete this comment' });
+        return;
+      }
+    }
+    
+    // Delete all related data in order (foreign key constraints)
+    // 1. Delete all likes for this comment
+    await db.Like.destroy({
+      where: { 
+        likeable_id: commentId,
+        likeable_type: 'Comment'
+      }
+    });
+    
+    // 2. Delete all child comments (replies)
+    await db.Comment.destroy({
+      where: { parent_id: commentId }
+    });
+    
+    // 3. Finally delete the comment
+    await comment.destroy();
+    
+    res.status(200).json({
+      message: 'Comment deleted successfully'
+    });
+  } catch (err) {
+    console.error('Error deleting comment:', err);
+    res.status(500).json({ error: 'Failed to delete comment' });
   }
 };

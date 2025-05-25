@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getCurrentUserId } from '../../services/userServices';
+import { checkGroupMembership, isGroupCreator } from '../../services/membershipServices';
+import { getSessionData } from '../../services/authServices';
 import '../styles/NewPostPage.css';
 import '../styles/common.css';
 
-const NewPostPage: React.FC = () => {
-  const { groupId } = useParams();
+const NewPostPage: React.FC = () => {  const { groupId } = useParams();
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isMember, setIsMember] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
+  const [groupName, setGroupName] = useState('');
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -19,7 +24,6 @@ const NewPostPage: React.FC = () => {
       setImagePreview(URL.createObjectURL(file));
     }
   };
-
   const handleSubmit = async () => {
     if (!title || !content) {
       alert('Judul dan isi harus diisi!');
@@ -43,8 +47,13 @@ const NewPostPage: React.FC = () => {
         formData.append('image', selectedImage);
       }
 
-      const res = await fetch(`http://localhost:3000/posts`, {
+      // Use protected post route that checks for membership
+      const token = getSessionData();
+      const res = await fetch(`http://localhost:3000/protected-posts`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -58,9 +67,74 @@ const NewPostPage: React.FC = () => {
     } catch (err: any) {
       alert('Error: ' + err.message);
     }
-  };  return (
+  }; 
+  // Check if user is a member of the group or the creator
+  useEffect(() => {
+    const verifyGroupAccess = async () => {
+      setLoading(true);
+      try {
+        if (!groupId) {
+          navigate('/groups');
+          return;
+        }
+
+        const userId = getCurrentUserId();
+        if (!userId) {
+          navigate('/login');
+          return;
+        }
+
+        // Fetch group details
+        const groupRes = await fetch(`http://localhost:3000/groups/${groupId}`);
+        if (groupRes.ok) {
+          const groupData = await groupRes.json();
+          setGroupName(groupData.name || 'Group');
+          
+          // Check if user is the creator
+          if (groupData.created_by === userId) {
+            setIsCreator(true);
+            setIsMember(true); // Creators are automatically members
+            setLoading(false);
+            return; // No need to check membership if user is creator
+          }
+        }
+
+        // Check if user is a member of the group
+        const membershipStatus = await checkGroupMembership(groupId, userId);
+        setIsMember(membershipStatus);
+        
+        if (!membershipStatus && !isCreator) {
+          setTimeout(() => {
+            navigate(`/groups/${groupId}`);
+          }, 3000); // Redirect after 3 seconds
+        }
+      } catch (error) {
+        console.error('Error checking group access:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyGroupAccess();
+  }, [groupId, navigate]);
+    if (loading) {
+    return <div className="loading-container">Checking group access...</div>;
+  }
+
+  if (!isMember && !isCreator) {
+    return (
+      <div className="restricted-container">
+        <div className="restricted-message">
+          <h2>Access Denied</h2>
+          <p>You need to be a member of this group to create a post.</p>
+          <p>Redirecting you to the group page...</p>
+        </div>
+      </div>
+    );
+  }
+  return (
     <div className="new-post-container">
-      <h2>Buat Postingan Baru</h2>
+      <h2>Create Post in {groupName}</h2>
       <div className="form-group">
         <label>Judul</label>
         <input

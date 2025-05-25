@@ -57,6 +57,49 @@ button:hover {
   background-color: #145fd6;
 }
 
+/* Loading container */
+.loading-container {
+  max-width: 600px;
+  margin: 60px auto;
+  padding: 40px 24px;
+  text-align: center;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', sans-serif;
+  color: #65676b;
+  font-size: 1.1rem;
+}
+
+/* Restricted access container */
+.restricted-container {
+  max-width: 600px;
+  margin: 60px auto;
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.restricted-message {
+  padding: 30px 20px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.restricted-message h2 {
+  color: #dc3545;
+  margin-bottom: 16px;
+}
+
+.restricted-message p {
+  color: #555;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
 @media (max-width: 600px) {
   .new-post-container {
     margin: 40px 16px;

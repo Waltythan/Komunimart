@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import '../styles/PostDetail.css';
 import '../styles/common.css';
 import { getCurrentUserId } from '../../services/userServices';
+import { getSessionData } from '../../services/authServices';
+import PostActions from '../components/PostActions';
+import CommentActions from '../components/CommentActions';
 
 // Komentar dari backend
 interface Comment {
@@ -17,6 +20,7 @@ interface Comment {
 
 const PostDetail: React.FC = () => {
   const { postId } = useParams();
+  const navigate = useNavigate();
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -36,35 +40,87 @@ const PostDetail: React.FC = () => {
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   // For simplicity, hardcode user_id (replace with auth context in production)
   const userId = getCurrentUserId();
+  // Restricted content state
+  const [isRestricted, setIsRestricted] = useState<boolean>(false);
+  const [restrictedGroupId, setRestrictedGroupId] = useState<string | null>(null);
 
   // Fetch post detail & comments
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const postRes = await fetch(`http://localhost:3000/posts/${postId}`);        if (postRes.ok) {
+        const token = getSessionData();
+        
+        // Use the protected post route that checks for group membership
+        const postRes = await fetch(`http://localhost:3000/protected-posts/${postId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (postRes.ok) {
           const postData = await postRes.json();
-          // Add placeholder author name for demo
-          postData.author_name = `User ${postData.author_id?.substring(0, 5) || 'Unknown'}`;
           setPost(postData);
+          setIsRestricted(false);
+        } else {
+          const errorData = await postRes.json();
+          if (postRes.status === 403 && errorData.error === 'Access denied') {
+            // Set post with restricted info
+            setIsRestricted(true);
+            setRestrictedGroupId(errorData.group_id);
+            return; // Don't try to load comments if access is denied
+          }
         }
-          const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`);
+        
+        // Only fetch comments if we have access to the post
+        const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
         if (commentRes.ok) {
           const commentData = await commentRes.json();
-          // Add placeholder author names for comments
+          // Add author names from response
           const enhancedComments = commentData.map((comment: Comment) => ({
             ...comment,
-            author_name: `User ${comment.author_id?.substring(0, 5) || 'Unknown'}`,
             created_at: comment.created_at || new Date().toISOString(),
           }));
           setComments(enhancedComments);
         }
+      } catch (error) {
+        console.error('Error fetching post data:', error);
       } finally {
         setLoading(false);
       }
     };
-    if (postId) fetchData();
+      if (postId) fetchData();
   }, [postId]);
+
+  // Function to refresh comments
+  const refreshComments = async () => {
+    if (!postId) return;
+    
+    try {
+      const token = getSessionData();
+      const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (commentRes.ok) {
+        const commentData = await commentRes.json();
+        const enhancedComments = commentData.map((comment: Comment) => ({
+          ...comment,
+          created_at: comment.created_at || new Date().toISOString(),
+        }));
+        setComments(enhancedComments);
+      }
+    } catch (error) {
+      console.error('Error refreshing comments:', error);
+    }
+  };
 
   // Fetch post likes
   useEffect(() => {
@@ -271,7 +327,7 @@ const PostDetail: React.FC = () => {
                       src={`http://localhost:3000/uploads/comments/${comment.image_url}`}
                       alt="Comment attachment"
                       onError={(e) => {
-                        e.currentTarget.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjRjBGMkY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2NTY3NkIiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiI+SW1hZ2UgTm90IEZvdW5kPC90ZXh0Pgo8L3N2Zz4=";
+                        e.currentTarget.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMIAwIDYwMCA0MDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjRjBGMkY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2NTY3NkIiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiI+SW1hZ2UgTm90IEZvdW5kPC90ZXh0Pgo8L3N2Zz4=";
                       }}
                     />
                   </div>
@@ -290,8 +346,7 @@ const PostDetail: React.FC = () => {
                   onClick={() => handleReply(comment.comment_id, comment.author_name)}
                 >
                   Reply
-                </button>
-                <span className="comment-time">
+                </button>                <span className="comment-time">
                   {formatDate(comment.created_at || new Date().toISOString())}
                 </span>
                 {commentLikes[comment.comment_id] > 0 && (
@@ -301,7 +356,13 @@ const PostDetail: React.FC = () => {
                     </svg>
                     {commentLikes[comment.comment_id] || 0}
                   </span>
-                )}
+                )}                {/* Comment delete actions for admin/author */}
+                <CommentActions 
+                  commentId={comment.comment_id}
+                  authorId={comment.author_id}
+                  groupId={post?.group_id || ''}
+                  onCommentDeleted={refreshComments}
+                />
               </div>
             </div>
           </div>
@@ -387,6 +448,37 @@ const PostDetail: React.FC = () => {
     );
   }
 
+  // Render restricted content message
+  if (isRestricted && restrictedGroupId) {
+    return (
+      <div className="post-detail-container">
+        <div className="restricted-content">
+          <div className="restricted-header">
+            <Link to="/" className="back-btn">
+              &larr; Back to Home
+            </Link>
+            <h2>Restricted Content</h2>
+          </div>
+          <div className="restricted-message">
+            <div className="lock-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+              </svg>
+            </div>
+            <h3>This post is only available to group members</h3>
+            <p>You need to join the group to view this content.</p>
+            <button 
+              className="join-group-btn"
+              onClick={() => navigate(`/groups/${restrictedGroupId}`)}
+            >
+              Go to Group Page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="post-detail-container">
       <div className="post-card">
@@ -460,10 +552,17 @@ const PostDetail: React.FC = () => {
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
                 <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
-              </svg>
-              <span>Share</span>
+              </svg>              <span>Share</span>
             </button>
           </div>
+          
+          {/* Post delete actions for admin/author */}
+          <PostActions 
+            postId={post.post_id}
+            authorId={post.author_id}
+            groupId={post.group_id}
+            onPostDeleted={() => navigate('/groups')}
+          />
         </div>
       </div>
 

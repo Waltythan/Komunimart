@@ -12,6 +12,7 @@ const { Post }     = require('./Post');
 const { Comment }  = require('./Comment');
 const { Like }     = require('./Like');
 const { Bookmark } = require('./Bookmark');
+const { GroupMembership } = require('./GroupMembership');
 
 // Inisialisasi Sequelize dengan decorator loader
 const sequelize = config.use_env_variable
@@ -23,9 +24,8 @@ const sequelize = config.use_env_variable
       host:     config.host,
       port:     config.port,
       dialect:  config.dialect,
-      logging:  config.logging,
-      // model class array
-      models: [ User, Group, Post, Comment, Like, Bookmark ]
+      logging:  config.logging,      // model class array
+      models: [ User, Group, Post, Comment, Like, Bookmark, GroupMembership ]
     });
 
 const db = {
@@ -36,7 +36,8 @@ const db = {
   Post,
   Comment,
   Like,
-  Bookmark
+  Bookmark,
+  GroupMembership
 };
 
 module.exports = db;

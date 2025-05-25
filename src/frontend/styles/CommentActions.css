@@ -1,0 +1,99 @@
+.comment-actions {
+  position: relative;
+  display: inline-block;
+  margin-left: 8px;
+}
+
+.delete-comment-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.delete-comment-btn:hover {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.delete-comment-btn:active {
+  transform: scale(0.95);
+}
+
+.delete-confirm-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.delete-confirm-content {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.delete-confirm-content h4 {
+  margin: 0 0 16px 0;
+  color: #d32f2f;
+  font-size: 18px;
+}
+
+.delete-confirm-content p {
+  margin: 0 0 20px 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.confirm-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.confirm-btn.danger {
+  background: #d32f2f;
+  color: white;
+}
+
+.confirm-btn.danger:hover {
+  background: #c62828;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  color: #666;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background: #f8f9fa;
+  border-color: #bbb;
+}

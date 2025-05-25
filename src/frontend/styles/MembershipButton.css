@@ -1,0 +1,63 @@
+.membership-button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  outline: none;
+  margin: 8px 0;
+  min-width: 120px;
+}
+
+.membership-button.join {
+  background-color: #1877f2;
+  color: white;
+}
+
+.membership-button.join:hover {
+  background-color: #166fe5;
+}
+
+.membership-button.leave {
+  background-color: #e4e6eb;
+  color: #050505;
+}
+
+.membership-button.leave:hover {
+  background-color: #d8dadf;
+}
+
+.membership-button.loading {
+  background-color: #e4e6eb;
+  color: #65676b;
+  cursor: not-allowed;
+}
+
+.membership-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.membership-button.creator {
+  background-color: #42b72a;
+  color: white;
+  cursor: default;
+}
+
+.membership-button.creator:hover {
+  background-color: #42b72a;
+  opacity: 1;
+}
+
+.membership-button.admin {
+  background-color: #9b59b6;
+  color: white;
+  cursor: default;
+}
+
+.membership-button.admin:hover {
+  background-color: #9b59b6;
+  opacity: 1;
+}

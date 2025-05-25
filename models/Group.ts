@@ -4,6 +4,7 @@ import {
 } from 'sequelize-typescript';
 import { User } from './User';
 import { Post } from './Post';
+import { GroupMembership } from './GroupMembership';
 
 @Table({ tableName: 'Groups', timestamps: false })
 export class Group extends Model<Group> {
@@ -42,9 +43,8 @@ export class Group extends Model<Group> {
     defaultValue: DataType.NOW
   })
   declare updated_at: Date;
-
-  @HasMany(() => User, 'group_id')
-  declare users: User[];
+  @HasMany(() => GroupMembership, 'group_id')
+  declare memberships: GroupMembership[];
 
   @HasMany(() => Post, 'group_id')
   declare posts: Post[];

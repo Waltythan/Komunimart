@@ -191,10 +191,18 @@ app.post('/profile/image', upload.single('image'), async (req: Request, res: Res
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
+// Import additional route files
+import membershipRoutes from './routes/memberships';
+import protectedPostRoutes from './routes/protectedPosts';
+
 // Use group routes
 app.use('/groups', groupRoutes);
 // Use post routes
 app.use('/posts', postRoutes);
+// Use membership routes
+app.use('/memberships', membershipRoutes);
+// Use protected post routes (requiring membership)
+app.use('/protected-posts', protectedPostRoutes);
 
 // Start server
 app.listen(PORT, () => {
