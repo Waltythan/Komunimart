@@ -32,7 +32,7 @@ export default function LoginPage() {
       alert(`Welcome, ${data.user.uname}!`);
       navigate('/groups'); // TODO: Create group page
     } catch (err: any) {
-      alert('❌ ' + err.message);
+      alert('❌ '+ (err.message || 'Login failed'));
     }
   };
 

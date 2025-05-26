@@ -56,12 +56,17 @@ export const getGroupById = async (req: Request, res: Response) => {
 export const deleteGroup = async (req: Request, res: Response) => {
   try {
     const { groupId } = req.params;
-    const { deleted_by } = req.body;
+    const { user_id, deleted_by } = req.body;
     
-    if (!deleted_by) {
-      res.status(400).json({ error: 'Deleted by user ID is required' });
+    // Use either the authenticated user_id from JWT or the deleted_by field
+    const userId = user_id || deleted_by;
+    
+    if (!userId) {
+      res.status(400).json({ error: 'User ID is required' });
       return;
     }
+    
+    console.log(`Deleting group ${groupId} by user ${userId}`);
     
     // Find the group
     const group = await db.Group.findByPk(groupId);
@@ -70,47 +75,89 @@ export const deleteGroup = async (req: Request, res: Response) => {
       return;
     }
     
-    // Check if the deleter is an admin
-    const membership = await db.GroupMembership.findOne({
-      where: {
-        user_id: deleted_by,
-        group_id: groupId
-      }
-    });
+    // Authentication and admin check is already handled by middlewares
+    // We don't need to check again, but we can log for audit purposes
+    console.log(`Group ${groupId} deletion initiated by user ${userId}`);
     
-    if (!membership || membership.role !== 'admin') {
-      res.status(403).json({ error: 'Only admins can delete groups' });
-      return;
+    // For debugging, log if this is the creator
+    if (group.created_by === userId) {
+      console.log(`User ${userId} is the creator of group ${groupId}`);
+    }    // Delete all related data in order (foreign key constraints)
+    // 1. Instead of using literal SQL, use the safer approach with Sequelize queries
+    try {
+      console.log('Finding all posts for this group...');
+      // First find all posts in this group
+      const posts = await db.Post.findAll({
+        where: { group_id: groupId },
+        attributes: ['post_id']
+      });
+      
+      const postIds = posts.map((post: { post_id: number }) => post.post_id);
+      console.log(`Found ${postIds.length} posts to delete`);
+      
+      // If there are any posts, delete related comments
+      if (postIds.length > 0) {
+        console.log('Deleting comments for posts...');
+        await db.Comment.destroy({
+          where: {
+            post_id: {
+              [db.Sequelize.Op.in]: postIds
+            }
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Error deleting comments:', err);
+      throw err; // Re-throw to be caught by the main try-catch
+    }
+      // 2. Delete all posts in this group
+    try {
+      console.log('Deleting posts for group...');
+      await db.Post.destroy({
+        where: { group_id: groupId }
+      });
+    } catch (err) {
+      console.error('Error deleting posts:', err);
+      throw err;
     }
     
-    // Delete all related data in order (foreign key constraints)
-    // 1. Delete all comments in posts within this group
-    await db.Comment.destroy({
-      where: {
-        post_id: {
-          [db.Sequelize.Op.in]: db.Sequelize.literal(`(SELECT post_id FROM Posts WHERE group_id = ${groupId})`)
-        }
-      }
-    });
-    
-    // 2. Delete all posts in this group
-    await db.Post.destroy({
-      where: { group_id: groupId }
-    });
-    
     // 3. Delete all memberships
-    await db.GroupMembership.destroy({
-      where: { group_id: groupId }
-    });
+    try {
+      console.log('Deleting group memberships...');
+      await db.GroupMembership.destroy({
+        where: { group_id: groupId }
+      });
+    } catch (err) {
+      console.error('Error deleting group memberships:', err);
+      throw err;
+    }
     
     // 4. Finally delete the group
-    await group.destroy();
+    try {
+      console.log('Deleting group...');
+      await group.destroy();
+    } catch (err) {
+      console.error('Error deleting the group:', err);
+      throw err;
+    }
     
     res.status(200).json({
       message: 'Group deleted successfully'
-    });
-  } catch (err) {
+    });  } catch (err: any) { // Type as any for Sequelize errors
     console.error('Error deleting group:', err);
-    res.status(500).json({ error: 'Failed to delete group' });
+    
+    // Provide more detailed error message
+    let errorMessage = 'Failed to delete group';
+    if (err.name && err.name === 'SequelizeDatabaseError') {
+      errorMessage += `: Database error - ${err.original?.message || 'Unknown database issue'}`;
+      console.error('SQL Query that caused error:', err.sql);
+    } else if (err.message) {
+      errorMessage += `: ${err.message}`;
+    }
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      code: err.original?.code || 'UNKNOWN_ERROR'
+    });
   }
 };

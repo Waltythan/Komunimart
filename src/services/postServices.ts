@@ -49,25 +49,66 @@ export const deleteComment = async (commentId: string): Promise<boolean> => {
   }
 };
 
-// Function to delete a group (admin only)
-export const deleteGroup = async (groupId: string): Promise<boolean> => {
+// Function to update a group (admin only)
+export const updateGroup = async (groupId: string, formData: FormData): Promise<boolean> => {
   try {
     const token = getSessionData();
     const response = await fetch(`http://localhost:3000/groups/${groupId}`, {
-      method: 'DELETE',
+      method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`
-      }
+      },
+      body: formData
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to delete group');
+      throw new Error(errorData.message || 'Failed to update group');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error updating group:', error);
+    return false;
+  }
+};
+
+// Function to delete a group (admin only)
+export const deleteGroup = async (groupId: string): Promise<boolean> => {
+  try {
+    const token = getSessionData();
+    const userId = getCurrentUserId();
+    
+    const response = await fetch(`http://localhost:3000/groups/${groupId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ deleted_by: userId })
+    });    if (!response.ok) {
+      let errorMessage = 'Failed to delete group';
+      
+      try {
+        const errorData = await response.json();
+        console.log('Server error response:', errorData);
+        
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch (jsonError) {
+        // Could not parse JSON response
+        console.error('Could not parse error response:', jsonError);
+      }
+      
+      throw new Error(errorMessage);
     }
 
     return true;
   } catch (error) {
     console.error('Error deleting group:', error);
-    return false;
+    throw error; // Re-throw to handle in the component
   }
 };

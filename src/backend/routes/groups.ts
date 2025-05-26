@@ -9,6 +9,8 @@ import {
   deleteGroup
 } from '../controllers/groupController';
 import { deleteFile } from '../utils/fileManager';
+import { authenticateJWT } from '../middlewares/auth.middleware';
+import { checkGroupAdminRole } from '../middlewares/group.middleware';
 
 const router = express.Router();
 
@@ -52,8 +54,8 @@ router.get('/', getGroups);
 // Get detail of a group (with posts)
 router.get('/:groupId', getGroupById);
 
-// Endpoint update group
-router.put('/:groupId', upload.single('image'), async (req, res) => {
+// Endpoint update group (admin only)
+router.put('/:groupId', authenticateJWT, checkGroupAdminRole, upload.single('image'), async (req, res) => {
   try {
     const { groupId } = req.params;
     const { name, description } = req.body;
@@ -89,6 +91,6 @@ router.put('/:groupId', upload.single('image'), async (req, res) => {
 });
 
 // Delete a group (admin only)
-router.delete('/:groupId', deleteGroup);
+router.delete('/:groupId', authenticateJWT, checkGroupAdminRole, deleteGroup);
 
 export default router;
