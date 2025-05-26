@@ -1,4 +1,5 @@
 import { getSessionData } from './authServices';
+import { getCurrentUserId } from './userServices';
 
 // Function to join a group
 export const joinGroup = async (groupId: string, userId: string): Promise<boolean> => {
@@ -182,34 +183,6 @@ export const isGroupAdmin = async (groupId: string, userId: string): Promise<boo
   }
 };
 
-// Function to promote a member to admin
-export const promoteMemberToAdmin = async (groupId: string, userId: string): Promise<boolean> => {
-  try {
-    const token = getSessionData();
-    const response = await fetch('http://localhost:3000/memberships/promote', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        group_id: groupId,
-        user_id: userId
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to promote member');
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error promoting member:', error);
-    return false;
-  }
-};
-
 // Function to get member count of a group
 export const getGroupMemberCount = async (groupId: string): Promise<number> => {
   try {
@@ -226,15 +199,20 @@ export const getGroupMemberCount = async (groupId: string): Promise<number> => {
 export const removeMemberFromGroup = async (groupId: string, userId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
-    const response = await fetch('http://localhost:3000/memberships/remove', {
-      method: 'POST',
+    const currentUserId = getCurrentUserId();
+    
+    if (!currentUserId) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch(`http://localhost:3000/memberships/remove/${groupId}/${userId}`, {
+      method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        group_id: groupId,
-        user_id: userId
+        removed_by: currentUserId
       })
     });
 

@@ -43,7 +43,7 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
           <input 
             type="text" 
             className="search-input"
-            placeholder="Search groups, users, or topics..."
+            placeholder="Search Komunimart"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />          <button className="search-button" aria-label="Search">

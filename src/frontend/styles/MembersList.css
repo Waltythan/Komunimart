@@ -105,7 +105,6 @@
   align-items: center;
 }
 
-.promote-btn,
 .remove-btn {
   background: none;
   border: none;
@@ -116,15 +115,10 @@
   transition: all 0.2s ease;
 }
 
-.promote-btn:hover {
-  background: #e3f2fd;
-}
-
 .remove-btn:hover {
   background: #ffebee;
 }
 
-.promote-btn:active,
 .remove-btn:active {
   transform: scale(0.95);
 }

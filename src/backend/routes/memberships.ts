@@ -6,7 +6,6 @@ import {
   getGroupMemberCount,
   checkMembership,
   getUserGroups,
-  promoteMember,
   removeMember
 } from '../controllers/membershipController';
 import { authenticateJWT } from '../middlewares/auth.middleware';
@@ -30,9 +29,6 @@ router.get('/check/:groupId/:userId', checkMembership);
 
 // Get all groups a user is a member of
 router.get('/user/:userId', getUserGroups);
-
-// Promote a member to admin (admin only)
-router.put('/promote/:groupId/:userId', authenticateJWT, promoteMember);
 
 // Remove a member from group (admin only)
 router.delete('/remove/:groupId/:userId', authenticateJWT, removeMember);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getGroupMembers, promoteMemberToAdmin, removeMemberFromGroup, isGroupAdmin } from '../../services/membershipServices';
+import { getGroupMembers, removeMemberFromGroup, isGroupAdmin } from '../../services/membershipServices';
 import { getCurrentUserId } from '../../services/userServices';
 import { getSessionData } from '../../services/authServices';
 import '../styles/MembersList.css';
@@ -55,29 +55,6 @@ const MembersList: React.FC<MembersListProps> = ({ groupId, currentUserRole, onM
 
     fetchMembers();
   }, [groupId]);
-  const handlePromoteMember = async (userId: string) => {
-    if (!currentUserId) {
-      alert('Authentication required');
-      return;
-    }
-
-    try {
-      const success = await promoteMemberToAdmin(groupId, userId);
-      
-      if (success) {
-        alert('Member promoted to admin successfully');
-        // Refresh members list
-        const membersData = await getGroupMembers(groupId);
-        setMembers(membersData);
-        if (onMemberUpdate) onMemberUpdate();
-      } else {
-        alert('Failed to promote member');
-      }
-    } catch (err) {
-      console.error('Error promoting member:', err);
-      alert('Failed to promote member');
-    }
-  };
   const handleRemoveMember = async (userId: string) => {
     if (!currentUserId) {
       alert('Authentication required');
@@ -134,7 +111,8 @@ const MembersList: React.FC<MembersListProps> = ({ groupId, currentUserRole, onM
         <p className="no-members">No members yet</p>
       ) : (
         <ul>
-          {members.map((member) => (            <li key={member.id} className="member-item">
+          {members.map((member) => (
+            <li key={member.id} className="member-item">
               <div className="member-left">
                 <div className="member-avatar">
                   {typeof getProfileImage(member) === 'string' ? (
@@ -154,18 +132,9 @@ const MembersList: React.FC<MembersListProps> = ({ groupId, currentUserRole, onM
                   )}
                 </div>
               </div>
-                {/* Admin actions */}
+              {/* Admin actions */}
               {isCurrentUserAdmin && currentUserId !== member.user.user_id && (
                 <div className="member-actions">
-                  {member.role !== 'admin' && (
-                    <button 
-                      className="promote-btn"
-                      onClick={() => handlePromoteMember(member.user.user_id)}
-                      title="Promote to Admin"
-                    >
-                      ⬆️
-                    </button>
-                  )}
                   <button 
                     className="remove-btn"
                     onClick={() => handleRemoveMember(member.user.user_id)}

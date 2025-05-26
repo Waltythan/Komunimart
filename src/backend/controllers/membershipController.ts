@@ -216,68 +216,6 @@ export const getUserGroups = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-// Promote a member to admin (admin only)
-export const promoteMember = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { groupId, userId } = req.params;
-    const { promoted_by } = req.body;
-    
-    if (!promoted_by) {
-      res.status(400).json({ error: 'Promoted by user ID is required' });
-      return;
-    }
-    
-    // Check if group exists
-    const group = await db.Group.findByPk(groupId);
-    if (!group) {
-      res.status(404).json({ error: 'Group not found' });
-      return;
-    }
-    
-    // Check if the promoter is an admin
-    const promoterMembership = await db.GroupMembership.findOne({
-      where: {
-        user_id: promoted_by,
-        group_id: groupId
-      }
-    });
-    
-    if (!promoterMembership || promoterMembership.role !== 'admin') {
-      res.status(403).json({ error: 'Only admins can promote members' });
-      return;
-    }
-    
-    // Find the target member
-    const targetMembership = await db.GroupMembership.findOne({
-      where: {
-        user_id: userId,
-        group_id: groupId
-      }
-    });
-    
-    if (!targetMembership) {
-      res.status(404).json({ error: 'User is not a member of this group' });
-      return;
-    }
-    
-    if (targetMembership.role === 'admin') {
-      res.status(400).json({ error: 'User is already an admin' });
-      return;
-    }
-    
-    // Promote to admin
-    await targetMembership.update({ role: 'admin' });
-    
-    res.status(200).json({
-      message: 'Member promoted to admin successfully',
-      membership: targetMembership
-    });
-  } catch (err) {
-    console.error('Error promoting member:', err);
-    res.status(500).json({ error: 'Failed to promote member' });
-  }
-};
-
 // Remove a member from group (admin only)
 export const removeMember = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -321,9 +259,8 @@ export const removeMember = async (req: Request, res: Response): Promise<void> =
       res.status(404).json({ error: 'User is not a member of this group' });
       return;
     }
-    
-    // Prevent removing the group creator
-    if (group.created_by === parseInt(userId)) {
+      // Prevent removing the group creator
+    if (group.created_by === userId) {
       res.status(403).json({ error: 'Cannot remove the group creator' });
       return;
     }
