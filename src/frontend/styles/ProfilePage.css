@@ -1,65 +1,544 @@
-/* src/pages/styles/ProfilePage.css */
-.profile-container {
-  max-width: 800px;
+/* ProfilePage.css - Consistent with App Design */
+
+/* === MAIN CONTAINER === */
+.profile-detail-container {
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
+  background-color: #f0f2f5;
+  font-family: 'Segoe UI', sans-serif;
 }
 
-.profile-info-section {
-  background-color: #f5f5f5;
-  padding: 20px;
+/* === LOADING & ERROR STATES === */
+.loading-state, .error-state {
+  background-color: #fff;
+  padding: 60px 40px;
   border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.profile-info-section p {
-  margin: 8px 0;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.action-buttons {
-  margin-top: 20px;
   text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.update-button {
-  background-color: #3498db;
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #1877f2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+.error-icon {
+  margin-bottom: 20px;
+  color: #e74c3c;
+}
+
+.error-state h3 {
+  color: #e74c3c;
+  margin-bottom: 12px;
+}
+
+.error-state p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.retry-btn {
+  background-color: #1877f2;
   color: white;
   border: none;
   padding: 10px 20px;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.retry-btn:hover {
+  background-color: #145fd6;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* === PROFILE HEADER === */
+.profile-header {
+  background-color: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.profile-avatar-section {
+  flex-shrink: 0;
+}
+
+.profile-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #e4e6ea;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-avatar-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1877f2, #42b72a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 48px;
   font-weight: bold;
-  transition: background-color 0.2s;
+  border: 4px solid #e4e6ea;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.update-button:hover {
-  background-color: #2980b9;
+.profile-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.update-button:disabled {
-  background-color: #95a5a6;
+.profile-info h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+  color: #1c1e21;
+  font-weight: 700;
+}
+
+.profile-email {
+  color: #65676b;
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+}
+
+.profile-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #65676b;
+  padding: 8px 12px;
+  background-color: #f7f8fa;
+  border-radius: 6px;
+  border-left: 3px solid #1877f2;
+}
+
+.meta-label {
+  font-weight: 500;
+}
+
+.meta-date {
+  font-style: italic;
+}
+
+.profile-action-bar {
+  flex-shrink: 0;
+}
+
+.edit-profile-btn {
+  background-color: #1877f2;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.edit-profile-btn:hover {
+  background-color: #145fd6;
+}
+
+/* === PROFILE CONTENT === */
+.profile-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.profile-main-section {
+  min-width: 0;
+}
+
+.profile-sidebar-section {
+  min-width: 0;
+}
+
+.profile-section {
+  background-color: #fff;
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.profile-section h2 {
+  margin-bottom: 12px;
+  font-size: 1.3rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* === FORM STYLING === */
+.profile-info-display {
+  padding: 0;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+  font-weight: 500;
+  color: #65676b;
+  font-size: 0.9rem;
+}
+
+.info-value {
+  color: #1c1e21;
+  font-weight: 500;
+}
+
+.profile-edit-form {
+  padding: 0;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #1c1e21;
+  font-size: 0.9rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #dddfe2;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+  background-color: #f7f8fa;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #1877f2;
+  background-color: #fff;
+  box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background-color: #1877f2;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #145fd6;
+}
+
+.btn-secondary {
+  background-color: #e4e6ea;
+  color: #1c1e21;
+}
+
+.btn-secondary:hover {
+  background-color: #d8dadf;
+}
+
+.btn-success {
+  background-color: #42b72a;
+  color: white;
+}
+
+.btn-success:hover {
+  background-color: #36a420;
+}
+
+.btn:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* Enhance existing profile picture styles */
-.profile-picture-section {
-  margin: 30px 0;
-}
-
-.profile-picture-container {
+/* === PROFILE PICTURE SECTION === */
+.current-picture-display {
+  text-align: center;
   margin-bottom: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.file-input-label {
-  background-color: #3498db;
-  color: white;
-  transition: background-color 0.2s;
+.current-picture-container {
+  display: inline-block;
+  position: relative;
 }
 
-.file-input-label:hover {
-  background-color: #2980b9;
+.current-profile-pic {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 4px solid #e4e6ea;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.picture-placeholder {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background-color: #f0f2f5;
+  border: 4px solid #e4e6ea;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #65676b;
+  margin: 0 auto;
+  gap: 8px;
+}
+
+.picture-placeholder span {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.picture-upload-section {
+  margin-top: 20px;
+}
+
+.upload-preview-container {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.preview-container {
+  display: inline-block;
+  position: relative;
+}
+
+.profile-preview {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #1877f2;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.preview-label {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #65676b;
+  font-weight: 500;
+}
+
+.upload-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: #f7f8fa;
+  border: 2px dashed #dddfe2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #65676b;
+  margin: 0 auto;
+  gap: 4px;
+  transition: border-color 0.2s ease;
+}
+
+.upload-placeholder:hover {
+  border-color: #1877f2;
+}
+
+.upload-placeholder span {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.file-input {
+  display: none;
+}
+
+.upload-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.file-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: #e4e6ea;
+  color: #1c1e21;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  font-size: 0.9rem;
+  border: none;
+}
+
+.file-upload-btn:hover {
+  background-color: #d8dadf;
+}
+
+.btn-loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 768px) {
+  .profile-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-detail-container {
+    padding: 16px;
+  }
+  
+  .profile-header {
+    padding: 16px;
+  }
+  
+  .profile-header-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .profile-action-bar {
+    align-self: stretch;
+  }
+  
+  .edit-profile-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .btn {
+    justify-content: center;
+  }
+  
+  .upload-controls {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-detail-container {
+    padding: 12px;
+  }
+  
+  .profile-header {
+    padding: 12px;
+  }
+  
+  .profile-avatar, .profile-avatar-placeholder {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .profile-avatar-placeholder {
+    font-size: 36px;
+  }
+  
+  .profile-info h1 {
+    font-size: 1.5rem;
+  }
+  
+  .current-profile-pic {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .picture-placeholder {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .profile-preview {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .upload-placeholder {
+    width: 80px;
+    height: 80px;
+  }
 }

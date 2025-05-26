@@ -9,6 +9,10 @@ import postRoutes from './routes/posts';
 import { upload, getImageUrl } from './utils/fileUpload';
 import path from 'path';
 import { generateToken } from './utils/jwt_helper';
+import membershipRoutes from './routes/memberships';
+import protectedPostRoutes from './routes/protectedPosts';
+// Import authenticateJWT middleware
+import { authenticateJWT } from './middlewares/auth.middleware';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -150,29 +154,142 @@ app.post('/auth/login', async (req: Request, res: Response) => {
   }
 });
 
-// Upload profile picture
-app.post('/profile/image', upload.single('image'), async (req: Request, res: Response) => {
+// Get current user endpoint (protected)
+app.get('/me', authenticateJWT, async (req: Request, res: Response) => {
+  try {
+    const userId = req.body.user_id; // Set by authenticateJWT middleware
+    
+    const user = await User.findByPk(userId, {
+      attributes: ['user_id', 'uname', 'email', 'profile_pic', 'created_at']
+    });
+    
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    
+    res.json({
+      ...user.toJSON(),
+      profile_pic: getImageUrl(user.profile_pic, 'profile')
+    });
+  } catch (err) {
+    console.error('Error fetching current user:', err);
+    res.status(500).json({ 
+      message: 'Error fetching user data',
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+// Update user profile endpoint (protected)
+app.put('/profile/update', authenticateJWT, async (req: Request, res: Response) => {
+  try {
+    const userId = req.body.user_id; // Set by authenticateJWT middleware
+    const { uname, email } = req.body;
+    
+    if (!uname && !email) {
+      res.status(400).json({ message: 'At least one field (uname or email) is required' });
+      return;
+    }
+    
+    // Find the user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    
+    // Check if username is already taken (if updating username)
+    if (uname && uname !== user.uname) {
+      const existingUser = await User.findOne({ where: { uname } });
+      if (existingUser) {
+        res.status(400).json({ message: 'Username already taken' });
+        return;
+      }
+    }
+    
+    // Check if email is already taken (if updating email)
+    if (email && email !== user.email) {
+      const existingEmail = await User.findOne({ where: { email } });
+      if (existingEmail) {
+        res.status(400).json({ message: 'Email already registered' });
+        return;
+      }
+    }
+    
+    // Update the user
+    const updateData: any = {};
+    if (uname) updateData.uname = uname;
+    if (email) updateData.email = email;
+    
+    await user.update(updateData);
+    
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        user_id: user.user_id,
+        uname: user.uname,
+        email: user.email,
+        profile_pic: getImageUrl(user.profile_pic, 'profile'),
+        created_at: user.created_at
+      }
+    });
+  } catch (err) {
+    console.error('Error updating profile:', err);
+    res.status(500).json({ 
+      message: 'Error updating profile',
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+// Upload profile picture (protected)
+app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: Request, res: Response) => {
+  console.log('🖼️ Profile image upload request received');
+  console.log('📁 File:', req.file);
+  console.log('👤 Request body:', req.body);
+  
   if (!req.file) {
+    console.log('❌ No file uploaded');
     res.status(400).json({ message: 'No file uploaded' });
     return;
   }
-  
-  try {
-    const { user_id } = req.body;
+    try {
+    // Use req.user exclusively since multer overwrites req.body
+    const user_id = req.user?.userId;
+    console.log('🔍 Looking for user with ID:', user_id);
+    console.log('👤 req.user:', req.user);
+    console.log('📝 req.body (after multer):', req.body);
+    
     if (!user_id) {
-      res.status(400).json({ message: 'User ID is required' });
+      console.log('❌ No user ID found in req.user');
+      res.status(401).json({ message: 'Authentication failed - user ID not found' });
       return;
     }
     
     // Update user profile
     const user = await User.findByPk(user_id);
     if (!user) {
+      console.log('❌ User not found with ID:', user_id);
       res.status(404).json({ message: 'User not found' });
       return;
     }
     
+    console.log('✅ User found:', user.uname);
+    
+    // Delete old profile picture if exists
+    if (user.profile_pic) {
+      try {
+        const { deleteFile } = require('./utils/fileManager');
+        await deleteFile(user.profile_pic, 'profile');
+      } catch (deleteErr) {
+        console.log('Could not delete old profile picture:', deleteErr);
+      }
+    }
+    
     // Save filename to database
     await user.update({ profile_pic: req.file.filename });
+    console.log('✅ Profile picture updated successfully');
     
     // Return success with image URL
     res.json({
@@ -190,10 +307,6 @@ app.post('/profile/image', upload.single('image'), async (req: Request, res: Res
 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
-
-// Import additional route files
-import membershipRoutes from './routes/memberships';
-import protectedPostRoutes from './routes/protectedPosts';
 
 // Use group routes
 app.use('/groups', groupRoutes);

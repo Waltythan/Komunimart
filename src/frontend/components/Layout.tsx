@@ -3,6 +3,7 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import '../styles/Layout.css';
+import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate } from '../../services/userServices';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,9 +13,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname;
-  const params = useParams<{ groupId?: string, postId?: string }>();
-  const [subtitle, setSubtitle] = useState<string | undefined>();
+  const params = useParams<{ groupId?: string, postId?: string }>();  const [subtitle, setSubtitle] = useState<string | undefined>();
   const [groups, setGroups] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   
   // Don't show navbar on authentication pages
   const isAuthPage = path === '/' || path === '/register';
@@ -67,8 +68,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     fetchPageData();
     
     // Fetch groups for sidebar
-    if (!isAuthPage) {
-      const fetchGroups = async () => {
+    if (!isAuthPage) {      const fetchGroups = async () => {
         try {
           const res = await fetch('http://localhost:3000/groups');
           if (res.ok) {
@@ -79,8 +79,32 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           console.error('Failed to fetch groups for sidebar:', error);
         }
       };
+        const fetchCurrentUser = async () => {
+        try {
+          const user = await getCurrentUserProfile();
+          // Process profile picture URL to ensure it's a full URL
+          if (user && user.profile_pic && !user.profile_pic.startsWith('http')) {
+            user.profile_pic = `http://localhost:3000${user.profile_pic}`;
+          }
+          setCurrentUser(user);
+        } catch (error) {
+          console.error('Failed to fetch current user for sidebar:', error);
+          // Fallback to username only
+          const username = getCurrentUsername();
+          setCurrentUser({ uname: username });
+        }
+      };
+        fetchGroups();
+      fetchCurrentUser();
       
-      fetchGroups();
+      // Listen for profile updates
+      const unsubscribe = onProfileUpdate(() => {
+        console.log('Profile updated, refreshing layout data');
+        fetchCurrentUser();
+      });
+      
+      // Cleanup listener on unmount
+      return unsubscribe;
     }
   }, [path, params, isAuthPage]);
   
@@ -97,14 +121,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="sidebar-header">
               <h3>Your Shortcuts</h3>
             </div>
-            <div className="sidebar-menu">
-              <Link to="/profile" className="sidebar-item">
-                <div className="sidebar-icon profile-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
-                  </svg>
-                </div>
-                <span>My Profile</span>
+            <div className="sidebar-menu">              <Link to="/profile" className="sidebar-item">
+                {currentUser?.profile_pic ? (
+                  <div className="sidebar-profile-pic">
+                    <img 
+                      src={currentUser.profile_pic} 
+                      alt={`${currentUser.uname}'s profile`}
+                    />
+                  </div>
+                ) : (
+                  <div className="sidebar-icon profile-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                    </svg>
+                  </div>
+                )}
+                <span>{currentUser?.uname ? `${currentUser.uname}'s Profile` : 'My Profile'}</span>
               </Link>
               <Link to="/groups" className="sidebar-item">
                 <div className="sidebar-icon">

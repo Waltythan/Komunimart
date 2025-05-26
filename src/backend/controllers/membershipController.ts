@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 const db = require('../../../models');
 import { Op } from 'sequelize';
+import { getImageUrl } from '../utils/fileUpload';
 
 // Add a user to a group
 export const joinGroup = async (req: Request, res: Response): Promise<void> => {
@@ -125,7 +126,19 @@ export const getGroupMembers = async (req: Request, res: Response): Promise<void
       ]
     });
     
-    res.status(200).json(memberships);
+    // Process memberships to include proper profile picture URLs
+    const processedMemberships = memberships.map((membership: any) => {
+      const membershipData = membership.toJSON();
+      return {
+        ...membershipData,
+        user: {
+          ...membershipData.user,
+          profile_pic: getImageUrl(membershipData.user.profile_pic, 'profile')
+        }
+      };
+    });
+    
+    res.status(200).json(processedMemberships);
   } catch (err) {
     console.error('Error fetching group members:', err);
     res.status(500).json({ error: 'Failed to fetch group members' });

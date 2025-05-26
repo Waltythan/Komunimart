@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Navbar.css';
 import { clearSessionData } from '../../services/authServices';
-import { getCurrentUsername } from '../../services/userServices';
+import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate } from '../../services/userServices';
 
 interface NavbarProps {
   title?: string;
@@ -15,10 +15,43 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [username, setUsername] = useState<string | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
     useEffect(() => {
-    const currentUsername = getCurrentUsername();
-    setUsername(currentUsername);
-    console.log("Current username from token:", currentUsername);
+    const fetchUserData = async () => {
+      try {
+        const currentUsername = getCurrentUsername();
+        setUsername(currentUsername);
+        console.log("Current username from token:", currentUsername);
+          // Fetch full user profile to get profile picture
+        const userProfile = await getCurrentUserProfile();
+        if (userProfile && userProfile.profile_pic) {
+          // Check if it's already a full URL
+          let profilePicUrl = userProfile.profile_pic;
+          if (!profilePicUrl.startsWith('http')) {
+            // If it's a relative URL, prepend the server URL
+            profilePicUrl = `http://localhost:3000${profilePicUrl}`;
+          }
+          setProfilePicture(profilePicUrl);
+          console.log("Profile picture loaded:", profilePicUrl);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile in navbar:', error);
+        // Fallback to just username if profile fetch fails
+        const currentUsername = getCurrentUsername();
+        setUsername(currentUsername);
+      }
+    };
+    
+    fetchUserData();
+    
+    // Listen for profile updates
+    const unsubscribe = onProfileUpdate(() => {
+      console.log('Profile updated, refreshing navbar data');
+      fetchUserData();
+    });
+    
+    // Cleanup listener on unmount
+    return unsubscribe;
   }, []);
   
   const handleLogout = () => {
@@ -57,14 +90,21 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
       <div className="header-right">
         <div className="nav-actions">
           <div className="profile-menu">
-            <div className="username-display">{username || 'User'}</div>
-            <button 
+            <div className="username-display">{username || 'User'}</div>            <button 
               className="profile-button"
               onClick={() => setShowDropdown(!showDropdown)}
             >
-              <div className="profile-initial-circle">
-                {getInitial()}
-              </div>
+              {profilePicture ? (
+                <img 
+                  src={profilePicture} 
+                  alt={`${username}'s profile`}
+                  className="profile-picture-nav"
+                />
+              ) : (
+                <div className="profile-initial-circle">
+                  {getInitial()}
+                </div>
+              )}
             </button>
             {showDropdown && (
               <div className="profile-dropdown">

@@ -81,11 +81,14 @@ const MembersList: React.FC<MembersListProps> = ({ groupId, currentUserRole, onM
       console.error('Error removing member:', err);
       alert('Failed to remove member');
     }
-  };
-
-  const getProfileImage = (member: Member) => {
+  };  const getProfileImage = (member: Member) => {
     if (member.user.profile_pic) {
-      return `http://localhost:3000/uploads/profiles/${member.user.profile_pic}`;
+      // Check if it's already a full URL
+      if (member.user.profile_pic.startsWith('http')) {
+        return member.user.profile_pic;
+      }
+      // If it's a relative URL, prepend the server URL
+      return `http://localhost:3000${member.user.profile_pic}`;
     }
     
     // Default is the first letter of the username

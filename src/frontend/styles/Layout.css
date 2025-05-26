@@ -89,6 +89,25 @@
   color: #1c1e21;
 }
 
+/* Sidebar profile picture styles */
+.sidebar-profile-pic {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #1877f2;
+}
+
+.sidebar-profile-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .profile-icon {
   color: #1877f2;
   background-color: rgba(24, 119, 242, 0.1);

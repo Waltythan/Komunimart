@@ -193,6 +193,20 @@
   border: 1px solid #dddfe2;
 }
 
+/* Profile picture styles for navbar */
+.profile-picture-nav {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #1877f2;
+  transition: border-color 0.2s ease;
+}
+
+.profile-picture-nav:hover {
+  border-color: #166fe5;
+}
+
 .profile-dropdown {
   position: absolute;
   right: 0;
