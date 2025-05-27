@@ -3,6 +3,7 @@ import { getGroupMembers, removeMemberFromGroup, isGroupAdmin } from '../../serv
 import { getCurrentUserId } from '../../services/userServices';
 import { getSessionData } from '../../services/authServices';
 import '../styles/MembersList.css';
+import { normalizeImageUrl } from '../utils/imageHelper';
 
 interface MembersListProps {
   groupId: string;
@@ -83,12 +84,8 @@ const MembersList: React.FC<MembersListProps> = ({ groupId, currentUserRole, onM
     }
   };  const getProfileImage = (member: Member) => {
     if (member.user.profile_pic) {
-      // Check if it's already a full URL
-      if (member.user.profile_pic.startsWith('http')) {
-        return member.user.profile_pic;
-      }
-      // If it's a relative URL, prepend the server URL
-      return `http://localhost:3000${member.user.profile_pic}`;
+      // Use the normalizeImageUrl utility to handle all URL formats consistently
+      return normalizeImageUrl(member.user.profile_pic, 'profiles');
     }
     
     // Default is the first letter of the username
@@ -117,12 +114,24 @@ const MembersList: React.FC<MembersListProps> = ({ groupId, currentUserRole, onM
           {members.map((member) => (
             <li key={member.id} className="member-item">
               <div className="member-left">
-                <div className="member-avatar">
-                  {typeof getProfileImage(member) === 'string' ? (
+                <div className="member-avatar">                  {typeof getProfileImage(member) === 'string' ? (
                     <img 
                       src={getProfileImage(member) as string} 
                       alt={`${member.user.uname}`} 
                       className="member-profile-pic"
+                      onError={(e) => {
+                        console.error(`Failed to load member profile image: ${e.currentTarget.src}`);
+                        const target = e.currentTarget as HTMLImageElement;
+                        target.style.display = 'none';
+                        // Try to find the parent and add a fallback
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const fallback = document.createElement('div');
+                          fallback.className = 'member-initial';
+                          fallback.textContent = member.user.uname.charAt(0).toUpperCase();
+                          parent.appendChild(fallback);
+                        }
+                      }}
                     />
                   ) : (
                     getProfileImage(member)

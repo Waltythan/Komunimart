@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getGroupMemberCount } from '../../services/membershipServices';
+import { normalizeImageUrl, getFallbackImageSrc, debugImageUrl } from '../utils/imageHelper';
 import '../styles/MainPage.css';
 
 interface Post {
@@ -109,12 +110,26 @@ const MainPage: React.FC = () => {
   return (
     <div className="main-page">
       <div className="group-header-banner">
-        <div className="group-cover-image">
-          {group.image_url ? (
+        <div className="group-cover-image">          {group.image_url ? (
             <img 
-              src={`http://localhost:3000/uploads/groups/${group.image_url}`} 
+              src={normalizeImageUrl(group.image_url, 'groups')}
               alt={group.name}
               onError={(e) => {
+                console.error(`Failed to load group banner image: ${e.currentTarget.src}`);
+                debugImageUrl(group.image_url);
+                
+                // Try direct URL without type folder as a fallback
+                const currentSrc = e.currentTarget.src;
+                if (currentSrc.includes('/uploads/groups/') && group.image_url) {
+                  const filename = group.image_url.split('/').pop();
+                  if (filename) {
+                    e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                    console.log('Trying fallback group URL:', e.currentTarget.src);
+                    return;
+                  }
+                }
+                
+                // If that fails too, use a custom SVG with the group name
                 e.currentTarget.src = `data:image/svg+xml;base64,${btoa(`<svg width="800" height="200" viewBox="0 0 800 200" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="200" fill="#F0F2F5"/><text x="400" y="110" text-anchor="middle" fill="#65676B" font-family="Arial" font-size="24" font-weight="bold">${group.name}</text></svg>`)}`;
               }}
             />
@@ -246,14 +261,27 @@ const MainPage: React.FC = () => {
                         ? `${post.content.slice(0, 300)}...`
                         : post.content}
                     </p>
-                    
-                    {post.image_url && (
+                      {post.image_url && post.image_url?.trim() !== '' && (
                       <div className="post-image">
                         <img
-                          src={`http://localhost:3000/uploads/posts/${post.image_url}`}
+                          src={normalizeImageUrl(post.image_url, 'posts')}
                           alt={post.title}
                           onError={(e) => {
-                            e.currentTarget.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDYwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjBGMkY1Ii8+Cjx0ZXh0IHg9IjMwMCIgeT0iMjEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjU2NzZCIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiPkltYWdlIE5vdCBGb3VuZDwvdGV4dD4KPC9zdmc+";
+                            console.error(`Failed to load post image: ${e.currentTarget.src}`);
+                            debugImageUrl(post.image_url);
+                              // Try direct URL without type folder as a fallback
+                            const currentSrc = e.currentTarget.src;
+                            if (currentSrc.includes('/uploads/posts/') && post.image_url) {
+                              const filename = post.image_url.split('/').pop();
+                              if (filename) {
+                                e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                                console.log('Trying fallback post URL:', e.currentTarget.src);
+                                return;
+                              }
+                            }
+                            
+                            // If that also fails, use fallback image
+                            e.currentTarget.src = getFallbackImageSrc(600, 400, 18);
                           }}
                         />
                       </div>

@@ -5,6 +5,7 @@ import '../styles/ProfilePage.css';
 import '../styles/common.css';
 import { clearSessionData } from '../../services/authServices';
 import { getCurrentUserProfile, updateUserProfile, uploadProfilePictureWithRefresh } from '../../services/userServices';
+import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
 
 interface UserData {
   user_id: string;
@@ -31,7 +32,6 @@ const ProfilePage: React.FC = () => {
       setImagePreview(URL.createObjectURL(file));
     }
   };
-
   const handleProfilePictureUpdate = async () => {
     if (!selectedImage) {
       alert('Please select an image first');
@@ -43,9 +43,9 @@ const ProfilePage: React.FC = () => {
       // Refresh user data
       const updatedUser = await getCurrentUserProfile();
       if (updatedUser) {
-        // Process profile picture URL to ensure it's a full URL
-        if (updatedUser.profile_pic && !updatedUser.profile_pic.startsWith('http')) {
-          updatedUser.profile_pic = `http://localhost:3000${updatedUser.profile_pic}`;
+        // Use the normalizeImageUrl utility to handle profile picture URLs consistently
+        if (updatedUser.profile_pic) {
+          updatedUser.profile_pic = normalizeImageUrl(updatedUser.profile_pic, 'profiles');
         }
         setUserData(updatedUser);
       }
@@ -65,8 +65,7 @@ const ProfilePage: React.FC = () => {
       setEditForm({ uname: userData.uname, email: userData.email });
     }
     setEditing(!editing);
-  };
-  const handleEditSubmit = async () => {
+  };  const handleEditSubmit = async () => {
     if (!editForm.uname.trim() || !editForm.email.trim()) {
       alert('Please fill in all fields');
       return;
@@ -77,9 +76,9 @@ const ProfilePage: React.FC = () => {
       // Refresh user data
       const updatedUser = await getCurrentUserProfile();
       if (updatedUser) {
-        // Process profile picture URL to ensure it's a full URL
-        if (updatedUser.profile_pic && !updatedUser.profile_pic.startsWith('http')) {
-          updatedUser.profile_pic = `http://localhost:3000${updatedUser.profile_pic}`;
+        // Use the normalizeImageUrl utility to handle profile picture URLs consistently
+        if (updatedUser.profile_pic) {
+          updatedUser.profile_pic = normalizeImageUrl(updatedUser.profile_pic, 'profiles');
         }
         setUserData(updatedUser);
       }
@@ -88,17 +87,16 @@ const ProfilePage: React.FC = () => {
     } catch (err: any) {
       alert(`Error: ${err.message}`);
     }
-  };
-    // Fetch user data
+  };    // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
       try {
         const user = await getCurrentUserProfile();
         if (user) {
-          // Process profile picture URL to ensure it's a full URL
-          if (user.profile_pic && !user.profile_pic.startsWith('http')) {
-            user.profile_pic = `http://localhost:3000${user.profile_pic}`;
+          // Use the normalizeImageUrl utility to handle profile picture URLs consistently
+          if (user.profile_pic) {
+            user.profile_pic = normalizeImageUrl(user.profile_pic, 'profiles');
           }
           setUserData(user);
         } else {
@@ -150,14 +148,15 @@ const ProfilePage: React.FC = () => {
       {/* Profile Header Section */}
       <div className="profile-header">
         <div className="profile-header-content">
-          <div className="profile-avatar-section">
-            {userData.profile_pic ? (
+          <div className="profile-avatar-section">            {userData.profile_pic ? (
               <img 
                 src={userData.profile_pic} 
                 alt="Profile Picture" 
                 className="profile-avatar"
                 onError={(e) => {
-                  e.currentTarget.src = `data:image/svg+xml;base64,${btoa('<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="60" r="60" fill="#E4E6EA"/><text x="60" y="75" text-anchor="middle" fill="#65676B" font-family="Arial" font-size="36" font-weight="bold">${userData.uname.charAt(0).toUpperCase()}</text></svg>')}`;
+                  console.error(`Failed to load profile image: ${e.currentTarget.src}`);
+                  // Use our standardized fallback image function
+                  e.currentTarget.src = getFallbackImageSrc(120, 120, 36);
                 }}
               />
             ) : (

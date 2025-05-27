@@ -68,7 +68,13 @@ router.post('/', authenticateJWT, upload.single('image'), async (req: Request, r
 router.get('/group/:groupId', authenticateJWT, checkGroupMembership, async (req: Request, res: Response) => {
   try {
     const { groupId } = req.params;
-      // Get all posts in the group with author info
+    
+    if (!groupId) {
+      res.status(400).json({ message: 'Group ID is required' });
+      return;
+    }
+    
+    // Get all posts for the group with author information
     const posts = await db.Post.findAll({
       where: { group_id: groupId },
       include: [
@@ -79,26 +85,25 @@ router.get('/group/:groupId', authenticateJWT, checkGroupMembership, async (req:
         }
       ],
       order: [['created_at', 'DESC']]
-    });
-    
-    // Process posts to include proper image URLs
+    });    // Process posts to include proper image URLs
     const processedPosts = posts.map((post: any) => {
       const postData = post.toJSON();
+      console.log('🖼️ GROUP POST DEBUG - Raw image_url from DB:', postData.image_url);
+      console.log('🖼️ GROUP POST DEBUG - Processed image_url:', getImageUrl(postData.image_url, 'post'));
       return {
         ...postData,
         image_url: getImageUrl(postData.image_url, 'post'),
         author: {
           ...postData.author,
-          profile_pic: getImageUrl(postData.author.profile_pic, 'profile')
+          profile_pic: getImageUrl(postData.author?.profile_pic, 'profile')
         }
       };
     });
     
     res.json(processedPosts);
-    return;
   } catch (err) {
-    console.error('Error getting posts:', err);
-    res.status(500).json({ error: 'Failed to get posts' });
+    console.error('Error getting group posts:', err);
+    res.status(500).json({ error: 'Failed to get group posts' });
     return;
   }
 });
@@ -154,6 +159,9 @@ router.get('/:postId', authenticateJWT, checkPostAccess, async (req: Request, re
       }
     });    // Process the post to include proper image URLs
     const postData = post.toJSON();
+    
+    console.log('🖼️ POST DEBUG - Raw image_url from DB:', postData.image_url);
+    console.log('🖼️ POST DEBUG - Processed image_url:', getImageUrl(postData.image_url, 'post'));
     
     const processedPost = {
       ...postData,

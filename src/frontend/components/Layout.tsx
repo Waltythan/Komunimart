@@ -4,6 +4,7 @@ import Navbar from './Navbar';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import '../styles/Layout.css';
 import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate } from '../../services/userServices';
+import { normalizeImageUrl, getFallbackImageSrc, debugImageUrl } from '../utils/imageHelper';
 
 interface LayoutProps {
   children: ReactNode;
@@ -78,13 +79,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         } catch (error) {
           console.error('Failed to fetch groups for sidebar:', error);
         }
-      };
-        const fetchCurrentUser = async () => {
+      };      const fetchCurrentUser = async () => {
         try {
           const user = await getCurrentUserProfile();
-          // Process profile picture URL to ensure it's a full URL
-          if (user && user.profile_pic && !user.profile_pic.startsWith('http')) {
-            user.profile_pic = `http://localhost:3000${user.profile_pic}`;
+          // Use the normalizeImageUrl utility for consistent URL handling
+          if (user && user.profile_pic) {
+            user.profile_pic = normalizeImageUrl(user.profile_pic, 'profiles');
           }
           setCurrentUser(user);
         } catch (error) {
@@ -169,12 +169,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   key={group.group_id} 
                   className="sidebar-item group-item"
                 >
-                  <div className="sidebar-group-image">
-                    {group.image_url ? (
+                  <div className="sidebar-group-image">                    {group.image_url ? (
                       <img 
-                        src={`http://localhost:3000/uploads/groups/${group.image_url}`}
+                        src={normalizeImageUrl(group.image_url, 'groups')}
                         alt={group.name}
                         onError={(e) => {
+                          console.error(`Failed to load sidebar group image: ${e.currentTarget.src}`);
+                          debugImageUrl(group.image_url);
+                          
+                          // Try direct URL without type folder as a fallback
+                          const currentSrc = e.currentTarget.src;
+                          if (currentSrc.includes('/uploads/groups/') && group.image_url) {
+                            const filename = group.image_url.split('/').pop();
+                            if (filename) {
+                              e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                              console.log('Trying fallback group URL:', e.currentTarget.src);
+                              return;
+                            }
+                          }
+                          
+                          // If all else fails, create a custom SVG with the group initial
                           e.currentTarget.src = `data:image/svg+xml;base64,${btoa(`<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="20" fill="#E4E6EA"/><text x="20" y="26" text-anchor="middle" fill="#65676B" font-family="Arial" font-size="16" font-weight="bold">${group.name.charAt(0)}</text></svg>`)}`;
                         }}
                       />

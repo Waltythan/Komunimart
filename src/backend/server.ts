@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
+import fs from 'fs-extra';
 const db = require('../../models');
 const { User } = db;
 const dbConfig = require('../../config/config.json').development;
@@ -308,6 +309,15 @@ app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
+// For debugging - log all image requests
+app.use('/uploads', (req, res, next) => {
+  console.log(`🖼️ Image request: ${req.path}`);
+  if (!fs.existsSync(path.join(__dirname, '../../uploads', req.path))) {
+    console.log(`❌ Image not found: ${req.path}`);
+  }
+  next();
+});
+
 // Use group routes
 app.use('/groups', groupRoutes);
 // Use post routes
@@ -316,6 +326,120 @@ app.use('/posts', postRoutes);
 app.use('/memberships', membershipRoutes);
 // Use protected post routes (requiring membership)
 app.use('/protected-posts', protectedPostRoutes);
+
+// Test endpoint to create a post with the test image (for debugging only)
+app.get('/test/create-post', async (req: Request, res: Response) => {
+  try {
+    // First, find a group to add the post to
+    const group = await db.Group.findOne();
+    if (!group) {
+      res.status(404).json({ message: 'No groups found' });
+      return;
+    }
+
+    // Find a user to be the author
+    const user = await User.findOne();
+    if (!user) {
+      res.status(404).json({ message: 'No users found' });
+      return;
+    }
+
+    // Create a test post with our test image
+    const post = await db.Post.create({
+      title: 'Test Post with Image',
+      content: 'This is a test post to verify image display functionality.',
+      group_id: group.group_id,
+      author_id: user.user_id,
+      image_url: 'test-post-image.png' // This matches the file we copied earlier
+    });
+
+    res.json({ 
+      message: 'Test post created successfully',
+      post_id: post.post_id,
+      image_url: getImageUrl(post.image_url, 'post')
+    });
+  } catch (error) {
+    console.error('Error creating test post:', error);
+    res.status(500).json({ error: 'Failed to create test post' });
+  }
+});
+
+// Test login endpoint (for debugging only)
+app.get('/test/login', async (req: Request, res: Response) => {
+  try {
+    // Find the first user
+    const user = await User.findOne();
+    if (!user) {
+      res.status(404).json({ message: 'No users found' });
+      return;
+    }
+
+    // Generate a token for testing
+    const token = generateToken(user.user_id, user.uname);
+    
+    res.json({
+      message: 'Test login successful',
+      token,
+      user: {
+        user_id: user.user_id,
+        uname: user.uname,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error('Error in test login:', error);
+    res.status(500).json({ error: 'Failed to test login' });
+  }
+});
+
+// Test endpoint to add user to group (for debugging only)
+app.get('/test/join-group/:groupId', async (req: Request, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    
+    // Find the first user
+    const user = await User.findOne();
+    if (!user) {
+      res.status(404).json({ message: 'No users found' });
+      return;
+    }
+
+    // Check if group exists
+    const group = await db.Group.findByPk(groupId);
+    if (!group) {
+      res.status(404).json({ message: 'Group not found' });
+      return;
+    }
+
+    // Check if membership already exists
+    const existingMembership = await db.GroupMembership.findOne({
+      where: {
+        user_id: user.user_id,
+        group_id: groupId
+      }
+    });
+
+    if (existingMembership) {
+      res.json({ message: 'User already a member' });
+      return;
+    }
+
+    // Create membership
+    await db.GroupMembership.create({
+      user_id: user.user_id,
+      group_id: groupId
+    });
+
+    res.json({ 
+      message: 'Membership created successfully',
+      user_id: user.user_id,
+      group_id: groupId
+    });
+  } catch (error) {
+    console.error('Error creating membership:', error);
+    res.status(500).json({ error: 'Failed to create membership' });
+  }
+});
 
 // Start server
 app.listen(PORT, () => {

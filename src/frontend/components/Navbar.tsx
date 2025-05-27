@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Navbar.css';
 import { clearSessionData } from '../../services/authServices';
 import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate } from '../../services/userServices';
+import { normalizeImageUrl } from '../utils/imageHelper';
 
 interface NavbarProps {
   title?: string;
@@ -21,16 +22,11 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
       try {
         const currentUsername = getCurrentUsername();
         setUsername(currentUsername);
-        console.log("Current username from token:", currentUsername);
-          // Fetch full user profile to get profile picture
+        console.log("Current username from token:", currentUsername);        // Fetch full user profile to get profile picture
         const userProfile = await getCurrentUserProfile();
         if (userProfile && userProfile.profile_pic) {
-          // Check if it's already a full URL
-          let profilePicUrl = userProfile.profile_pic;
-          if (!profilePicUrl.startsWith('http')) {
-            // If it's a relative URL, prepend the server URL
-            profilePicUrl = `http://localhost:3000${profilePicUrl}`;
-          }
+          // Use the normalizeImageUrl utility for consistent URL handling
+          const profilePicUrl = normalizeImageUrl(userProfile.profile_pic, 'profiles');
           setProfilePicture(profilePicUrl);
           console.log("Profile picture loaded:", profilePicUrl);
         }

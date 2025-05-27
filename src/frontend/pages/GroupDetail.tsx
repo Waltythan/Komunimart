@@ -7,6 +7,7 @@ import MembersList from '../components/MembersList';
 import AdminPanel from '../components/AdminPanel';
 import { getSessionData } from '../../services/authServices';
 import { getUserById } from '../../services/userServices';
+import { normalizeImageUrl, getFallbackImageSrc, debugImageUrl, BACKEND_URL } from '../utils/imageHelper';
 
 interface GroupDetails {
   group_id: string;
@@ -69,16 +70,20 @@ const GroupDetailPage: React.FC = () => {
       }
     };
     if (groupId) fetchData();
-  }, [groupId]);
-  // Effect to fetch posts when membership status changes
+  }, [groupId]);  // Effect to fetch posts when membership status changes
   useEffect(() => {
     const fetchPosts = async () => {
       if (!groupId || !isMember) return;
       
       setLoading(true);
       try {
-        // For now, use the regular posts endpoint while we fix the protected posts route
-        const postsRes = await fetch(`http://localhost:3000/posts/group/${groupId}`);
+        const token = getSessionData();
+        // Use the protected posts route to get posts with author information
+        const postsRes = await fetch(`http://localhost:3000/protected-posts/group/${groupId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         
         if (postsRes.ok) {
           setPosts(await postsRes.json());
@@ -145,30 +150,36 @@ const GroupDetailPage: React.FC = () => {
     <div className="group-detail-container">
       <div className="group-header">        <div className="group-image-container">          {groupDetails.image_url ? (
             <img 
-              src={
-                groupDetails.image_url.startsWith('http') 
-                  ? groupDetails.image_url 
-                  : groupDetails.image_url.startsWith('/uploads') 
-                    ? `http://localhost:3000${groupDetails.image_url}` 
-                    : `http://localhost:3000/uploads/groups/${groupDetails.image_url}`
-              } 
+              src={normalizeImageUrl(groupDetails.image_url, 'groups')}
               alt={`${groupDetails.name} cover image`}
-              className="group-cover-image"
-              onError={(e) => {
-                const imgUrl = e.currentTarget.src;
-                console.error("Image loading error for URL:", imgUrl);
+              className="group-cover-image"              onError={(e) => {
+                console.error(`Failed to load group image: ${e.currentTarget.src}`);
+                debugImageUrl(groupDetails.image_url);
                 
-                // Try an alternate path format if the current one failed
-                if (imgUrl.includes('/uploads/groups/')) {
-                  const filename = imgUrl.split('/').pop();
+                if (groupDetails.image_url) {
+                  const filename = groupDetails.image_url.split('/').pop();
                   if (filename) {
-                    e.currentTarget.src = `http://localhost:3000/uploads/groups/${filename}`;
-                    return;
+                    // Determine which path to try based on current URL
+                    const currentSrc = e.currentTarget.src;
+                    
+                    // If we're currently trying from groups subfolder, try root next
+                    if (currentSrc.includes('/uploads/groups/')) {
+                      e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
+                      console.log('Trying group image from root uploads dir:', e.currentTarget.src);
+                      return;
+                    }
+                    
+                    // If we're trying from root, try the groups subfolder next
+                    if (currentSrc.includes('/uploads/') && !currentSrc.includes('/uploads/groups/')) {
+                      e.currentTarget.src = `${BACKEND_URL}/uploads/groups/${filename}`;
+                      console.log('Trying group image from groups subfolder:', e.currentTarget.src);
+                      return;
+                    }
                   }
                 }
                 
-                // If all attempts fail, show placeholder
-                e.currentTarget.src = `data:image/svg+xml;base64,${btoa('<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="200" fill="#E3E3E3"/><text x="50%" y="50%" font-family="Arial" font-size="40" font-weight="bold" fill="#888888" text-anchor="middle" dy=".3em">No Image</text></svg>')}`;
+                // Final fallback: placeholder image
+                e.currentTarget.src = getFallbackImageSrc(200, 200, 40);
               }}
             />
           ) : (
@@ -231,16 +242,77 @@ const GroupDetailPage: React.FC = () => {
             <div className="post-list">
               {posts.length === 0 ? (
                 <p className="no-posts">No posts in this group yet. Be the first to post!</p>
-              ) : (
-                posts.map(post => (
+              ) : (                posts.map(post => (
                   <div key={post.post_id} className="post-item">
-                    <h3 className="post-title">{post.title}</h3>
-                    <p className="post-author">
-                      Oleh: {post.author?.uname || `User #${post.author_id}`}
-                    </p>
+                    <div className="post-header">
+                      <div className="post-author">                        <div className="author-avatar">
+                          {post.author?.profile_pic ? (
+                            <img 
+                              src={normalizeImageUrl(post.author.profile_pic, 'profiles')}
+                              alt={post.author.uname}                              onError={(e) => {
+                                console.error(`Failed to load profile image: ${e.currentTarget.src}`);
+                                debugImageUrl(post.author.profile_pic);
+                                
+                                // Try direct URL without type folder as a fallback
+                                const currentSrc = e.currentTarget.src;
+                                if (currentSrc.includes('/uploads/profiles/')) {
+                                  const filename = post.author.profile_pic.split('/').pop();
+                                  e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
+                                  console.log('Trying fallback profile URL:', e.currentTarget.src);
+                                  return;
+                                }
+                                
+                                // If that also fails, use initial
+                                const target = e.currentTarget as HTMLImageElement;
+                                target.style.display = 'none';
+                                const span = target.nextElementSibling as HTMLSpanElement;
+                                if (span) span.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <span style={{ display: post.author?.profile_pic ? 'none' : 'flex' }}>
+                            {post.author?.uname?.charAt(0).toUpperCase() || 'U'}
+                          </span>
+                        </div>
+                        <div className="author-info">
+                          <span className="author-name">{post.author?.uname || `User #${post.author_id}`}</span>
+                          <span className="post-date">
+                            {new Date(post.created_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>                    <h3 className="post-title">{post.title}</h3>
                     <p className="post-content">
                       {post.content.length > 100 ? `${post.content.slice(0, 100)}...` : post.content}
-                    </p>
+                    </p>                    {post.image_url && post.image_url.trim() !== '' && (
+                      <div className="post-preview-image">
+                        <img 
+                          src={normalizeImageUrl(post.image_url, 'posts')}
+                          alt={post.title}
+                          onError={(e) => {
+                            console.error(`Failed to load post image: ${e.currentTarget.src}`);
+                            debugImageUrl(post.image_url);
+                            
+                            // Try direct URL without type folder first as a fallback
+                            const currentSrc = e.currentTarget.src;
+                            if (currentSrc.includes('/uploads/posts/')) {
+                              const filename = post.image_url.split('/').pop();
+                              e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
+                              console.log('Trying fallback URL:', e.currentTarget.src);
+                              return;
+                            }
+                            
+                            // If that also fails, use fallback image
+                            e.currentTarget.src = getFallbackImageSrc(300, 200, 14);
+                          }}
+                        />
+                      </div>
+                    )}
+                    
                     <div className="post-footer">
                       <Link to={`/post/${post.post_id}`} className="post-link">
                         Lihat Selengkapnya
