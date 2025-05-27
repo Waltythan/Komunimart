@@ -6,6 +6,7 @@ import { getCurrentUserId } from '../../services/userServices';
 import { getSessionData } from '../../services/authServices';
 import PostActions from '../components/PostActions';
 import CommentActions from '../components/CommentActions';
+import { addBookmark, removeBookmark, checkBookmarkStatus } from '../../services/bookmarkServices';
 
 // Komentar dari backend
 interface Comment {
@@ -43,6 +44,7 @@ const PostDetail: React.FC = () => {
   // Restricted content state
   const [isRestricted, setIsRestricted] = useState<boolean>(false);
   const [restrictedGroupId, setRestrictedGroupId] = useState<string | null>(null);
+  const [bookmarked, setBookmarked] = useState(false);
 
   // Fetch post detail & comments
   useEffect(() => {
@@ -50,9 +52,8 @@ const PostDetail: React.FC = () => {
       setLoading(true);
       try {
         const token = getSessionData();
-        
-        // Use the protected post route that checks for group membership
-        const postRes = await fetch(`http://localhost:3000/protected-posts/${postId}`, {
+          // Use the protected post route that checks for group membership
+        const postRes = await fetch(`http://localhost:3000/api/protected-posts/${postId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -71,9 +72,8 @@ const PostDetail: React.FC = () => {
             return; // Don't try to load comments if access is denied
           }
         }
-        
-        // Only fetch comments if we have access to the post
-        const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`, {
+          // Only fetch comments if we have access to the post
+        const commentRes = await fetch(`http://localhost:3000/api/posts/${postId}/comments`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -101,9 +101,8 @@ const PostDetail: React.FC = () => {
   const refreshComments = async () => {
     if (!postId) return;
     
-    try {
-      const token = getSessionData();
-      const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`, {
+    try {      const token = getSessionData();
+      const commentRes = await fetch(`http://localhost:3000/api/posts/${postId}/comments`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -124,10 +123,9 @@ const PostDetail: React.FC = () => {
 
   // Fetch post likes
   useEffect(() => {
-    const fetchLikes = async () => {
-      if (!postId) return;
+    const fetchLikes = async () => {      if (!postId) return;
       const userId = getCurrentUserId();
-      let url = `http://localhost:3000/posts/likes/count?likeable_id=${postId}&likeable_type=Post`;
+      let url = `http://localhost:3000/api/posts/likes/count?likeable_id=${postId}&likeable_type=Post`;
       if (userId) {
         url += `&user_id=${userId}`;
       }
@@ -147,9 +145,8 @@ const PostDetail: React.FC = () => {
       const userId = getCurrentUserId();
       const likeCounts: Record<string, number> = {};
       const likedStates: Record<string, boolean> = {};
-      await Promise.all(
-        comments.map(async (comment) => {
-          let url = `http://localhost:3000/posts/likes/count?likeable_id=${comment.comment_id}&likeable_type=Comment`;
+      await Promise.all(        comments.map(async (comment) => {
+          let url = `http://localhost:3000/api/posts/likes/count?likeable_id=${comment.comment_id}&likeable_type=Comment`;
           if (userId) url += `&user_id=${userId}`;
           try {
             const res = await fetch(url);
@@ -220,8 +217,7 @@ const PostDetail: React.FC = () => {
       if (selectedImage) {
         formData.append('image', selectedImage);
       }
-      
-      const res = await fetch(`http://localhost:3000/posts/${postId}/comments`, {
+        const res = await fetch(`http://localhost:3000/api/posts/${postId}/comments`, {
         method: 'POST',
         body: formData,
       });
@@ -235,7 +231,7 @@ const PostDetail: React.FC = () => {
       setImagePreview(null);
       
       // Refresh comments
-      const commentRes = await fetch(`http://localhost:3000/posts/${postId}/comments`);
+      const commentRes = await fetch(`http://localhost:3000/api/posts/${postId}/comments`);
       if (commentRes.ok) {
         const commentData = await commentRes.json();        // Add placeholder author names
         const enhancedComments = commentData.map((comment: Comment) => ({
@@ -253,8 +249,7 @@ const PostDetail: React.FC = () => {
   // Like post
   const handleLikePost = async () => {
     if (!postId || !userId) return;
-    try {
-      const res = await fetch(`http://localhost:3000/posts/likes`, {
+    try {      const res = await fetch(`http://localhost:3000/api/posts/likes`, {
         method: postLiked ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -273,7 +268,7 @@ const PostDetail: React.FC = () => {
       setPostLikes(prevLikes => postLiked ? prevLikes - 1 : prevLikes + 1);
       
       // After like/unlike, fetch the latest count from the database for accuracy
-      const countRes = await fetch(`http://localhost:3000/posts/likes/count?likeable_id=${postId}&likeable_type=Post&user_id=${userId}`);
+      const countRes = await fetch(`http://localhost:3000/api/posts/likes/count?likeable_id=${postId}&likeable_type=Post&user_id=${userId}`);
       if (countRes.ok) {
         const data = await countRes.json();
         setPostLikes(data.count || 0);
@@ -388,8 +383,7 @@ const PostDetail: React.FC = () => {
         ...prev, 
         [commentId]: liked ? Math.max(0, (prev[commentId] || 1) - 1) : (prev[commentId] || 0) + 1 
       }));
-      
-      const res = await fetch(`http://localhost:3000/posts/likes`, {
+        const res = await fetch(`http://localhost:3000/api/posts/likes`, {
         method: liked ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -411,7 +405,7 @@ const PostDetail: React.FC = () => {
       }
       
       // After like/unlike, fetch the latest count from the database for accuracy
-      const countRes = await fetch(`http://localhost:3000/posts/likes/count?likeable_id=${commentId}&likeable_type=Comment&user_id=${userId}`);
+      const countRes = await fetch(`http://localhost:3000/api/posts/likes/count?likeable_id=${commentId}&likeable_type=Comment&user_id=${userId}`);
       if (countRes.ok) {
         const data = await countRes.json();
         setCommentLikes((prev) => ({ ...prev, [commentId]: data.count || 0 }));
@@ -425,6 +419,27 @@ const PostDetail: React.FC = () => {
         ...prev, 
         [commentId]: liked ? (prev[commentId] || 0) + 1 : Math.max(0, (prev[commentId] || 1) - 1) 
       }));
+    }
+  };
+
+  // Bookmark functionality
+  useEffect(() => {
+    const fetchBookmarkStatus = async () => {
+      if (post?.post_id) {
+        setBookmarked(await checkBookmarkStatus(post.post_id));
+      }
+    };
+    fetchBookmarkStatus();
+  }, [post?.post_id]);
+
+  const handleToggleBookmark = async () => {
+    if (!post?.post_id) return;
+    if (bookmarked) {
+      await removeBookmark(post.post_id);
+      setBookmarked(false);
+    } else {
+      await addBookmark(post.post_id);
+      setBookmarked(true);
     }
   };
 
@@ -548,11 +563,15 @@ const PostDetail: React.FC = () => {
               </svg>
               <span>Comment</span>
             </button>
-            <button className="post-action-btn">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
-                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
-              </svg>              <span>Share</span>
+            <button 
+              className={`post-action-btn${bookmarked ? ' active' : ''}`}
+              aria-label="Bookmark"
+              onClick={handleToggleBookmark}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16" className="post-btn-icon">
+                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.416V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
+              </svg>
+              <span>{bookmarked ? 'Bookmarked' : 'Bookmark'}</span>
             </button>
           </div>
           

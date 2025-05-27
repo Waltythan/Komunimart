@@ -39,7 +39,7 @@ const GroupDetailPage: React.FC = () => {
       setLoading(true);
       try {
         // Fetch group details
-        const groupRes = await fetch(`http://localhost:3000/groups`);
+        const groupRes = await fetch(`http://localhost:3000/api/groups`);
         if (groupRes.ok) {
           const groups = await groupRes.json();
           const group = groups.find((g: any) => String(g.group_id) === groupId);
@@ -76,9 +76,8 @@ const GroupDetailPage: React.FC = () => {
       if (!groupId || !isMember) return;
       
       setLoading(true);
-      try {
-        // For now, use the regular posts endpoint while we fix the protected posts route
-        const postsRes = await fetch(`http://localhost:3000/posts/group/${groupId}`);
+      try {        // For now, use the regular posts endpoint while we fix the protected posts route
+        const postsRes = await fetch(`http://localhost:3000/api/posts/group/${groupId}`);
         
         if (postsRes.ok) {
           setPosts(await postsRes.json());
@@ -110,7 +109,7 @@ const GroupDetailPage: React.FC = () => {
     if (groupId) {
       const fetchGroupDetails = async () => {
         try {
-          const groupRes = await fetch(`http://localhost:3000/groups`);
+          const groupRes = await fetch(`http://localhost:3000/api/groups`);
           if (groupRes.ok) {
             const groups = await groupRes.json();
             const group = groups.find((g: any) => String(g.group_id) === groupId);

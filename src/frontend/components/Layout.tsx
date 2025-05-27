@@ -4,6 +4,7 @@ import Navbar from './Navbar';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import '../styles/Layout.css';
 import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate } from '../../services/userServices';
+import { getSessionData, clearSessionData } from '../../services/authServices';
 
 interface LayoutProps {
   children: ReactNode;
@@ -21,11 +22,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isAuthPage = path === '/' || path === '/register';
   
   useEffect(() => {
+    // Check for session (token) at the start
+    const token = getSessionData();
+    if (!token && !isAuthPage) {
+      // Clear state and redirect to login
+      setCurrentUser(null);
+      setGroups([]);
+      clearSessionData();
+      navigate('/', { replace: true });
+      return;
+    }
     const fetchPageData = async () => {
       // Group Detail Page
       if (path.includes('/groups/') && params.groupId && !path.includes('new-post') && !path.includes('new')) {
         try {
-          const res = await fetch(`http://localhost:3000/groups`);
+          const res = await fetch(`http://localhost:3000/api/groups`);
           if (res.ok) {
             const groups = await res.json();
             const group = groups.find((g: any) => String(g.group_id) === params.groupId);
@@ -36,13 +47,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           }
         } catch (err) {
           console.error('Error fetching group details for navbar:', err);
-        }
-        setSubtitle('Detail Grup');
+        }        setSubtitle('Detail Grup');
       } 
       // Post Detail Page
       else if (path.includes('/post/') && params.postId) {
         try {
-          const res = await fetch(`http://localhost:3000/posts/${params.postId}`);
+          const res = await fetch(`http://localhost:3000/api/posts/${params.postId}`);
           if (res.ok) {
             const post = await res.json();
             setSubtitle(`Post: ${post.title}`);
@@ -52,7 +62,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           console.error('Error fetching post details for navbar:', err);
         }
         setSubtitle('Detail Postingan');
-      } 
+      }
       // Other pages with static subtitles
       else if (path.includes('new-post')) {
         setSubtitle('Buat Postingan Baru');
@@ -68,9 +78,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     fetchPageData();
     
     // Fetch groups for sidebar
-    if (!isAuthPage) {      const fetchGroups = async () => {
+    if (!isAuthPage) {
+      const fetchGroups = async () => {
         try {
-          const res = await fetch('http://localhost:3000/groups');
+          const res = await fetch('http://localhost:3000/api/groups');
           if (res.ok) {
             const data = await res.json();
             setGroups(data.slice(0, 5)); // Show just first 5 groups in sidebar
@@ -79,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           console.error('Failed to fetch groups for sidebar:', error);
         }
       };
-        const fetchCurrentUser = async () => {
+      const fetchCurrentUser = async () => {
         try {
           const user = await getCurrentUserProfile();
           // Process profile picture URL to ensure it's a full URL
@@ -94,7 +105,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           setCurrentUser({ uname: username });
         }
       };
-        fetchGroups();
+      fetchGroups();
       fetchCurrentUser();
       
       // Listen for profile updates
@@ -106,7 +117,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       // Cleanup listener on unmount
       return unsubscribe;
     }
-  }, [path, params, isAuthPage]);
+  }, [path, params, isAuthPage, navigate]);
   
   if (isAuthPage) {
     return <>{children}</>;

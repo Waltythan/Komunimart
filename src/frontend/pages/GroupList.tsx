@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getGroupMemberCount } from '../../services/membershipServices';
+import { getSessionData } from '../../services/authServices';
 import '../styles/GroupList.css';
 import '../styles/common.css';
 
@@ -20,9 +21,14 @@ const GroupListPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const token = getSessionData();
+    if (!token) {
+      navigate('/', { replace: true });
+      return;
+    }
     const fetchGroups = async () => {
       try {
-        const res = await fetch('http://localhost:3000/groups');
+        const res = await fetch('http://localhost:3000/api/groups');
         if (!res.ok) throw new Error('Failed to fetch groups');
         const data = await res.json();
           // Fetch actual member count for each group
@@ -44,7 +50,7 @@ const GroupListPage: React.FC = () => {
       }
     };
     fetchGroups();
-  }, []);
+  }, [navigate]);
 
   const filteredGroups = groups.filter(group => 
     group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/ProfilePage.css';
 import '../styles/common.css';
 import { clearSessionData } from '../../services/authServices';
-import { getCurrentUserProfile, updateUserProfile, uploadProfilePictureWithRefresh } from '../../services/userServices';
+import { getCurrentUserProfile, updateUserProfile, uploadProfilePictureWithRefresh, deleteUser } from '../../services/userServices';
+import { getUserBookmarks } from '../../services/bookmarkServices';
 
 interface UserData {
   user_id: string;
@@ -22,7 +23,31 @@ const ProfilePage: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ uname: '', email: '' });
+  const [showBookmarks, setShowBookmarks] = useState(false);
+  const [bookmarks, setBookmarks] = useState<any[]>([]);
+  const [bookmarksLoading, setBookmarksLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      if (!userData) {
+        throw new Error('User data not loaded.');
+      }
+      await deleteUser(userData.user_id);
+      clearSessionData();
+      alert('Your account has been deleted.');
+      navigate('/');
+    } catch (err: any) {
+      alert(`Error deleting account: ${err.message}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -87,8 +112,30 @@ const ProfilePage: React.FC = () => {
       setEditing(false);
     } catch (err: any) {
       alert(`Error: ${err.message}`);
+    }  };
+
+  const loadBookmarks = async () => {
+    if (!userData?.user_id) return;
+    
+    setBookmarksLoading(true);
+    try {
+      const userBookmarks = await getUserBookmarks(userData.user_id);
+      setBookmarks(userBookmarks);
+    } catch (error) {
+      console.error('Error loading bookmarks:', error);
+      setBookmarks([]);
+    } finally {
+      setBookmarksLoading(false);
     }
   };
+
+  // Load bookmarks when showBookmarks changes
+  useEffect(() => {
+    if (showBookmarks && userData) {
+      loadBookmarks();
+    }
+  }, [showBookmarks, userData]);
+
     // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
@@ -174,7 +221,7 @@ const ProfilePage: React.FC = () => {
             <div className="profile-meta-info">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M6 1a3 3 0 0 0-3 3v8a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4a3 3 0 0 0-3-3H6zM5 4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4z"/>
-                <path d="M7 6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V6z"/>
+                <path d="M7 6a.5.5 0 1 1 .5-.5h1a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V6z"/>
               </svg>
               <span className="meta-label">Member since:</span>
               <span className="meta-date">
@@ -186,14 +233,19 @@ const ProfilePage: React.FC = () => {
               </span>
             </div>
           </div>
-          
-          <div className="profile-action-bar">
+            <div className="profile-action-bar">
             <button onClick={handleEditToggle} className="edit-profile-btn">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
                 <path fillRule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
               </svg>
               {editing ? 'Cancel Edit' : 'Edit Profile'}
+            </button>
+            <button onClick={() => setShowBookmarks(!showBookmarks)} className="bookmarks-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.416V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
+              </svg>
+              {showBookmarks ? 'Hide Bookmarks' : 'View Bookmarks'}
             </button>
           </div>
         </div>
@@ -328,7 +380,7 @@ const ProfilePage: React.FC = () => {
                 ) : (
                   <div className="upload-placeholder">
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M14.002 13a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2V5A2 2 0 0 1 2 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-1.998 2zM14 2H4a1 1 0 0 0-1 1h9.002a2 2 0 0 1 2 2v7A1 1 0 0 0 15 11V3a1 1 0 0 0-1-1zM2.002 4a1 1 0 0 0-1 1v8l2.646-2.354a.5.5 0 0 1 .63-.062l2.66 1.773 3.71-3.71a.5.5 0 0 1 .577-.094l1.91 1.273V5a1 1 0 0 0-1-1h-10z"/>
+                      <path d="M14.002 13a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2V5A2 2 0 0 1 2 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-1.998 2zM14 2H4a1 1 0 0 0-1 1h9.002a2 2 0 0 1 2 2v7A1 1 0 0 0 15 11V3a1 1 0 0 0-1-1H2.5A1.5 1.5 0 0 0 1 2.5v11zM2.002 4a1 1 0 0 0-1 1v8l2.646-2.354a.5.5 0 0 1 .63-.062l2.66 1.773 3.71-3.71a.5.5 0 0 1 .577-.094l1.91 1.273V5a1 1 0 0 0-1-1h-10z"/>
                     </svg>
                     <span>Select New Image</span>
                   </div>
@@ -367,12 +419,79 @@ const ProfilePage: React.FC = () => {
                       Update Picture
                     </>
                   )}
-                </button>
-              </div>
+                </button>              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Bookmarks Section */}
+      {showBookmarks && (
+        <div className="profile-section bookmarks-section">
+          <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M2 2a2 0 0 1 2-2h8a2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.416V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
+            </svg>
+            My Bookmarks
+          </h2>
+          
+          {bookmarksLoading ? (
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <p>Loading bookmarks...</p>
+            </div>
+          ) : bookmarks.length === 0 ? (
+            <div className="empty-bookmarks">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16" className="empty-icon">
+                <path d="M2 2a2 0 0 1 2-2h8a2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.416V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
+              </svg>
+              <h3>No bookmarks yet</h3>
+              <p>You haven't bookmarked any posts yet. Start exploring groups and bookmark posts you want to save for later!</p>
+            </div>
+          ) : (
+            <div className="bookmarks-list">
+              {bookmarks.map((bookmark) => (
+                <div key={bookmark.id} className="bookmark-item">
+                  <div className="bookmark-header">
+                    <div className="bookmark-author">
+                      {bookmark.post?.author?.profile_pic ? (
+                        <img 
+                          src={bookmark.post.author.profile_pic} 
+                          alt="Profile" 
+                          className="author-avatar"
+                        />
+                      ) : (
+                        <div className="author-avatar-fallback">
+                          {bookmark.post?.author?.username?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                      )}
+                      <div className="author-info">
+                        <span className="author-name">{bookmark.post?.author?.username || 'Unknown'}</span>
+                        <span className="bookmark-group">in {bookmark.post?.group?.name || 'Unknown Group'}</span>
+                      </div>
+                    </div>
+                    <span className="bookmark-date">
+                      Bookmarked {new Date(bookmark.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="bookmark-content">
+                    <h3 
+                      className="bookmark-title"
+                      onClick={() => navigate(`/posts/${bookmark.post?.post_id}`)}
+                    >
+                      {bookmark.post?.title}
+                    </h3>
+                    <p className="bookmark-preview">
+                      {bookmark.post?.content?.substring(0, 150)}
+                      {bookmark.post?.content?.length > 150 ? '...' : ''}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

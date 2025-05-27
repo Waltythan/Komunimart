@@ -45,11 +45,9 @@ const NewPostPage: React.FC = () => {  const { groupId } = useParams();
       
       if (selectedImage) {
         formData.append('image', selectedImage);
-      }
-
-      // Use protected post route that checks for membership
+      }      // Use protected post route that checks for membership
       const token = getSessionData();
-      const res = await fetch(`http://localhost:3000/protected-posts`, {
+      const res = await fetch(`http://localhost:3000/api/protected-posts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -82,10 +80,8 @@ const NewPostPage: React.FC = () => {  const { groupId } = useParams();
         if (!userId) {
           navigate('/login');
           return;
-        }
-
-        // Fetch group details
-        const groupRes = await fetch(`http://localhost:3000/groups/${groupId}`);
+        }        // Fetch group details
+        const groupRes = await fetch(`http://localhost:3000/api/groups/${groupId}`);
         if (groupRes.ok) {
           const groupData = await groupRes.json();
           setGroupName(groupData.name || 'Group');

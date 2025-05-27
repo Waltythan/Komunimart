@@ -5,7 +5,7 @@ import { getCurrentUserId } from './userServices';
 export const joinGroup = async (groupId: string, userId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
-    const response = await fetch('http://localhost:3000/memberships/join', {
+    const response = await fetch('http://localhost:3000/api/memberships/join', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ export const joinGroup = async (groupId: string, userId: string): Promise<boolea
 export const leaveGroup = async (groupId: string, userId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
-    const response = await fetch('http://localhost:3000/memberships/leave', {
+    const response = await fetch('http://localhost:3000/api/memberships/leave', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export const leaveGroup = async (groupId: string, userId: string): Promise<boole
 export const checkGroupMembership = async (groupId: string, userId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/memberships/check/${groupId}/${userId}`, {
+    const response = await fetch(`http://localhost:3000/api/memberships/check/${groupId}/${userId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -83,7 +83,7 @@ export const checkGroupMembership = async (groupId: string, userId: string): Pro
 export const getGroupMembers = async (groupId: string): Promise<any[]> => {
   try {
     const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/memberships/group/${groupId}`, {
+    const response = await fetch(`http://localhost:3000/api/memberships/group/${groupId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -106,7 +106,7 @@ export const getGroupMembers = async (groupId: string): Promise<any[]> => {
 export const getUserGroups = async (userId: string): Promise<any[]> => {
   try {
     const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/memberships/user/${userId}`, {
+    const response = await fetch(`http://localhost:3000/api/memberships/user/${userId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -129,7 +129,7 @@ export const getUserGroups = async (userId: string): Promise<any[]> => {
 export const isGroupCreator = async (groupId: string, userId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/groups/${groupId}`, {
+    const response = await fetch(`http://localhost:3000/api/groups/${groupId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -153,7 +153,7 @@ export const isGroupAdmin = async (groupId: string, userId: string): Promise<boo
     const token = getSessionData();
     
     // First check if user is creator
-    const creatorResponse = await fetch(`http://localhost:3000/groups/${groupId}`, {
+    const creatorResponse = await fetch(`http://localhost:3000/api/groups/${groupId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -164,10 +164,8 @@ export const isGroupAdmin = async (groupId: string, userId: string): Promise<boo
       if (groupData.created_by === userId) {
         return true;
       }
-    }
-
-    // Then check if user has admin role in membership
-    const membershipResponse = await fetch(`http://localhost:3000/memberships/check/${groupId}/${userId}`, {
+    }    // Then check if user has admin role in membership
+    const membershipResponse = await fetch(`http://localhost:3000/api/memberships/check/${groupId}/${userId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -203,9 +201,7 @@ export const removeMemberFromGroup = async (groupId: string, userId: string): Pr
     
     if (!currentUserId) {
       throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`http://localhost:3000/memberships/remove/${groupId}/${userId}`, {
+    }    const response = await fetch(`http://localhost:3000/api/memberships/remove/${groupId}/${userId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',

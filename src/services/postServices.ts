@@ -5,7 +5,7 @@ import { getCurrentUserId } from './userServices';
 export const deletePost = async (postId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/posts/admin/${postId}`, {
+    const response = await fetch(`http://localhost:3000/api/posts/admin/${postId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -30,11 +30,13 @@ export const deletePost = async (postId: string): Promise<boolean> => {
 export const deleteComment = async (commentId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/posts/comments/${commentId}`, {
+    const response = await fetch(`http://localhost:3000/api/posts/comments/${commentId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ deleted_by: getCurrentUserId() })
     });
 
     if (!response.ok) {
@@ -53,7 +55,7 @@ export const deleteComment = async (commentId: string): Promise<boolean> => {
 export const updateGroup = async (groupId: string, formData: FormData): Promise<boolean> => {
   try {
     const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/groups/${groupId}`, {
+    const response = await fetch(`http://localhost:3000/api/groups/${groupId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -78,15 +80,14 @@ export const deleteGroup = async (groupId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
     const userId = getCurrentUserId();
-    
-    const response = await fetch(`http://localhost:3000/groups/${groupId}`, {
+      const response = await fetch(`http://localhost:3000/api/groups/${groupId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ deleted_by: userId })
-    });    if (!response.ok) {
+    });if (!response.ok) {
       let errorMessage = 'Failed to delete group';
       
       try {

@@ -40,7 +40,7 @@ const NewGroupPage: React.FC = () => {
         formData.append('image', selectedImage);
       }
       
-      const res = await fetch('http://localhost:3000/groups', {
+      const res = await fetch('http://localhost:3000/api/groups', {
         method: 'POST',
         body: formData,
         // Don't set Content-Type header

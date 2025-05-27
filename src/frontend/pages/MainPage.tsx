@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getGroupMemberCount } from '../../services/membershipServices';
+import { addBookmark, removeBookmark, checkBookmarkStatus } from '../../services/bookmarkServices';
+import { getSessionData } from '../../services/authServices';
 import '../styles/MainPage.css';
 
 interface Post {
@@ -32,58 +34,88 @@ const MainPage: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
+    const token = getSessionData && getSessionData();
+    if (!token) {
+      navigate('/', { replace: true });
+      return;
+    }
     const fetchData = async () => {
       setLoading(true);
       try {
         // Fetch group details
-        const groupRes = await fetch(`http://localhost:3000/groups`);
-        if (groupRes.ok) {
-          const groups = await groupRes.json();
-          const currentGroup = groups.find((g: any) => String(g.group_id) === groupId);
-            if (currentGroup) {
-            // Fetch actual member count for this group
-            const memberCount = await getGroupMemberCount(currentGroup.group_id);
-            setGroup({
-              ...currentGroup,
-              member_count: memberCount
-            });
-          } else {
-            setError("Group not found");
-          }
+        const groupRes = await fetch(`http://localhost:3000/api/groups`);
+        let groups;
+        if (!groupRes.ok) {
+          // Only read the body once
+          const errorText = await groupRes.text();
+          console.error('[MainPage] Failed to fetch groups:', groupRes.status, errorText);
+          throw new Error('Failed to fetch groups');
+        } else {
+          groups = await groupRes.json();
         }
-        
-        // Fetch posts for this group
-        const postsRes = await fetch(`http://localhost:3000/posts/group/${groupId}`);
+        const currentGroup = groups.find((g: any) => String(g.group_id) === groupId);
+        if (currentGroup) {
+          // Fetch actual member count for this group
+          const memberCount = await getGroupMemberCount(currentGroup.group_id);
+          setGroup({
+            ...currentGroup,
+            member_count: memberCount
+          });
+        } else {
+          setError("Group not found");
+        }        // Fetch posts for this group
+        const postsRes = await fetch(`http://localhost:3000/api/posts/group/${groupId}`);
         if (postsRes.ok) {
           const postsData = await postsRes.json();
-          
           // Enhance posts with placeholder data
           const enhancedPosts = postsData.map((post: Post) => ({
             ...post,
             comments_count: Math.floor(Math.random() * 10),
             likes_count: Math.floor(Math.random() * 20),
-            author_name: `User ${post.author_id.substring(0, 5)}`, // Placeholder for demo
+            author_name: `User ${post.author_id.substring(0, 5)}`,
           }));
-          
           setPosts(enhancedPosts);
         }
       } catch (err) {
         setError("Failed to load group data");
-        console.error(err);
+        console.error('[MainPage] Caught error in fetchData:', err);
       } finally {
         setLoading(false);
       }
     };
-    
     if (groupId) fetchData();
-  }, [groupId]);
+  }, [groupId, navigate]);
 
   const handleNewPost = () => {
     navigate(`/groups/${groupId}/new-post`);
   };
-  
+
+  const handleToggleBookmark = async (postId: string) => {
+    const isBookmarked = bookmarkedPosts[postId];
+    if (isBookmarked) {
+      await removeBookmark(postId);
+      setBookmarkedPosts((prev) => ({ ...prev, [postId]: false }));
+    } else {
+      await addBookmark(postId);
+      setBookmarkedPosts((prev) => ({ ...prev, [postId]: true }));
+    }
+  };
+
+  useEffect(() => {
+    // On mount, check bookmark status for all posts
+    const fetchBookmarks = async () => {
+      const status: { [key: string]: boolean } = {};
+      for (const post of posts) {
+        status[post.post_id] = await checkBookmarkStatus(post.post_id);
+      }
+      setBookmarkedPosts(status);
+    };
+    if (posts && posts.length > 0) fetchBookmarks();
+  }, [posts]);
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -284,12 +316,15 @@ const MainPage: React.FC = () => {
                       </svg>
                       <span className="post-btn-text">Comment</span>
                     </Link>
-                    <button className="post-action-btn" aria-label="Share">
+                    <button
+                      className={`post-action-btn${bookmarkedPosts[post.post_id] ? ' active' : ''}`}
+                      aria-label="Bookmark"
+                      onClick={() => handleToggleBookmark(post.post_id)}
+                    >
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16" className="post-btn-icon">
-                        <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
-                        <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3z"/>
+                        <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.416V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
                       </svg>
-                      <span className="post-btn-text">Share</span>
+                      <span className="post-btn-text">{bookmarkedPosts[post.post_id] ? 'Bookmarked' : 'Bookmark'}</span>
                     </button>
                   </div>
                 </div>

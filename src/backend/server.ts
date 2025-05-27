@@ -11,6 +11,8 @@ import path from 'path';
 import { generateToken } from './utils/jwt_helper';
 import membershipRoutes from './routes/memberships';
 import protectedPostRoutes from './routes/protectedPosts';
+import bookmarkRoutes from './routes/bookmarks';
+import userRoutes from './routes/users';
 // Import authenticateJWT middleware
 import { authenticateJWT } from './middlewares/auth.middleware';
 
@@ -309,13 +311,17 @@ app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: 
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
 // Use group routes
-app.use('/groups', groupRoutes);
+app.use('/api/groups', groupRoutes);
 // Use post routes
-app.use('/posts', postRoutes);
+app.use('/api/posts', postRoutes);
 // Use membership routes
-app.use('/memberships', membershipRoutes);
+app.use('/api/memberships', membershipRoutes);
 // Use protected post routes (requiring membership)
-app.use('/protected-posts', protectedPostRoutes);
+app.use('/api/protected-posts', protectedPostRoutes);
+// Use bookmark routes
+app.use('/api/bookmarks', bookmarkRoutes);
+// Use user routes
+app.use('/api/users', userRoutes);
 
 // Start server
 app.listen(PORT, () => {
