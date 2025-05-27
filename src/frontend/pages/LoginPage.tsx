@@ -22,13 +22,10 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || 'Login failed');
-      }
+        throw new Error(err.message || 'Login failed');      }
 
-      console.log('Received data:', data);
       storeSessionData(data.token); // Store the token in sessionStorage
       
-      console.log('✅ Login successful:', data);
       alert(`Welcome, ${data.user.uname}!`);
       navigate('/groups'); // TODO: Create group page
     } catch (err: any) {

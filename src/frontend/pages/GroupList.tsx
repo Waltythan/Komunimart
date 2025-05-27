@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getGroupMemberCount } from '../../services/membershipServices';
 import { getSessionData } from '../../services/authServices';
+import { normalizeImageUrl, getFallbackImageSrc} from '../utils/imageHelper';
 import '../styles/GroupList.css';
 import '../styles/common.css';
 
@@ -122,14 +123,21 @@ const GroupListPage: React.FC = () => {
                 className="group-card"
                 onClick={() => navigate(`/groups/${group.group_id}`)}
               >
-                <div className="group-card-top">
-                  {group.image_url ? (
+                <div className="group-card-top">                  {group.image_url ? (
                     <div className="group-cover-image">
                       <img
-                        src={`http://localhost:3000/uploads/groups/${group.image_url}`}
-                        alt={group.name}
-                        onError={(e) => {
-                          e.currentTarget.src = `data:image/svg+xml;base64,${btoa(`<svg width="300" height="100" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="100" fill="#F0F2F5"/><text x="150" y="55" text-anchor="middle" fill="#65676B" font-family="Arial" font-size="18" font-weight="bold">${group.name}</text></svg>`)}`;
+                        src={normalizeImageUrl(group.image_url, 'groups')}
+                        alt={group.name}                        onError={(e) => {
+                          // Try direct URL without type folder as fallback
+                          const currentSrc = e.currentTarget.src;
+                          if (currentSrc.includes('/uploads/groups/')) {
+                            const filename = group.image_url?.split('/').pop();
+                            e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                            return;
+                          }
+                          
+                          // Final fallback: placeholder image
+                          e.currentTarget.src = getFallbackImageSrc(300, 100, 18);
                         }}
                       />
                     </div>

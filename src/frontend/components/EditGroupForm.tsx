@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { updateGroup } from '../../services/postServices';
 import '../styles/EditGroupForm.css';
+import { normalizeImageUrl } from '../utils/imageHelper';
 
 interface EditGroupFormProps {
   groupId: string;
@@ -23,15 +24,11 @@ const EditGroupForm: React.FC<EditGroupFormProps> = ({
   const [description, setDescription] = useState(currentDescription);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  useEffect(() => {
+  const [isLoading, setIsLoading] = useState(false);  useEffect(() => {
     if (currentImageUrl) {
-      // Check if it's a relative path starting with /uploads
-      if (currentImageUrl.startsWith('/uploads')) {
-        setImagePreview(`http://localhost:3000${currentImageUrl}`);
-      } else {
-        setImagePreview(currentImageUrl);
-      }
+      // Use the normalizeImageUrl utility for consistent URL handling
+      const normalizedUrl = normalizeImageUrl(currentImageUrl, 'groups');
+      setImagePreview(normalizedUrl);
     }
   }, [currentImageUrl]);
 
@@ -110,13 +107,16 @@ const EditGroupForm: React.FC<EditGroupFormProps> = ({
               type="file" 
               accept="image/*" 
               onChange={handleImageChange}
-            />
-            {imagePreview && (
+            />            {imagePreview && (
               <div className="image-preview">
                 <img 
                   src={imagePreview} 
                   alt="Group preview" 
                   style={{ maxWidth: '100%', maxHeight: '150px', objectFit: 'cover' }}
+                  onError={(e) => {
+                    console.error(`Failed to load preview image: ${e.currentTarget.src}`);
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               </div>
             )}

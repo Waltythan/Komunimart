@@ -11,4 +11,6 @@ export const getSessionData = (): string | null => {
 // Function to clear session data from sessionStorage
 export const clearSessionData = () => {
   sessionStorage.removeItem('token');
+  // Also clear any user-related data
+  sessionStorage.removeItem('current_username');
 };

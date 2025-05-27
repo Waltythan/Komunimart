@@ -149,14 +149,9 @@ export const getGroupMembers = async (req: Request, res: Response): Promise<void
 export const checkMembership = async (req: Request, res: Response): Promise<void> => {
   try {
     const { groupId, userId } = req.params;
-    
-    // Log the inputs to help with debugging
-    console.log(`Checking membership: groupId=${groupId}, userId=${userId}`);
-    
-    // Check if group exists
+      // Check if group exists
     const group = await db.Group.findByPk(groupId);
     if (!group) {
-      console.log(`Group with ID ${groupId} not found`);
       res.status(404).json({ error: 'Group not found' });
       return;
     }
@@ -164,7 +159,6 @@ export const checkMembership = async (req: Request, res: Response): Promise<void
     // Check if user exists
     const user = await db.User.findByPk(userId);
     if (!user) {
-      console.log(`User with ID ${userId} not found`);
       res.status(404).json({ error: 'User not found' });
       return;
     }
@@ -176,16 +170,13 @@ export const checkMembership = async (req: Request, res: Response): Promise<void
         group_id: groupId
       }
     });
-    
-    if (membership) {
-      console.log(`Membership found: ${JSON.stringify(membership)}`);
+      if (membership) {
       res.status(200).json({
         isMember: true,
         role: membership.role,
         membership
       });
     } else {
-      console.log('No membership found');
       res.status(200).json({
         isMember: false
       });

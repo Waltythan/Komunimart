@@ -32,11 +32,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       alert('Authentication required');
       return;
     }
-    
-    try {
+      try {
       setShowDeleteConfirm(false); // Close the dialog first to show processing
-      
-      console.log(`Attempting to delete group ${groupId} by user ${userId}`);
       
       try {
         await deleteGroup(groupId);

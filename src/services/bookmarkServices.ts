@@ -6,12 +6,11 @@ export const addBookmark = async (postId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
     const userId = getCurrentUserId();
-    
-    if (!userId) {
+      if (!userId) {
       throw new Error('User not authenticated');
     }
     
-    const response = await fetch('http://localhost:3000/bookmarks', {
+    const response = await fetch('http://localhost:3000/api/bookmarks', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -40,12 +39,11 @@ export const removeBookmark = async (postId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
     const userId = getCurrentUserId();
-    
-    if (!userId) {
+      if (!userId) {
       throw new Error('User not authenticated');
     }
     
-    const response = await fetch('http://localhost:3000/bookmarks', {
+    const response = await fetch('http://localhost:3000/api/bookmarks', {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -74,12 +72,11 @@ export const getUserBookmarks = async (userId?: string): Promise<any[]> => {
   try {
     const token = getSessionData();
     const targetUserId = userId || getCurrentUserId();
-    
-    if (!targetUserId) {
+      if (!targetUserId) {
       throw new Error('User ID required');
     }
     
-    const response = await fetch(`http://localhost:3000/bookmarks/user/${targetUserId}`, {
+    const response = await fetch(`http://localhost:3000/api/bookmarks/user/${targetUserId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -104,12 +101,11 @@ export const checkBookmarkStatus = async (postId: string): Promise<boolean> => {
   try {
     const token = getSessionData();
     const userId = getCurrentUserId();
-    
-    if (!userId) {
+      if (!userId) {
       return false;
     }
     
-    const response = await fetch(`http://localhost:3000/bookmarks/status?user_id=${userId}&post_id=${postId}`, {
+    const response = await fetch(`http://localhost:3000/api/bookmarks/status?user_id=${userId}&post_id=${postId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Navbar.css';
 import { clearSessionData } from '../../services/authServices';
-import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate } from '../../services/userServices';
+import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate, storeCurrentUsername } from '../../services/userServices';
+import { normalizeImageUrl } from '../utils/imageHelper';
 
 interface NavbarProps {
   title?: string;
@@ -16,23 +17,26 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [username, setUsername] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
-    useEffect(() => {
+  useEffect(() => {
     const fetchUserData = async () => {
       try {
         const currentUsername = getCurrentUsername();
         setUsername(currentUsername);
-        console.log("Current username from token:", currentUsername);
-          // Fetch full user profile to get profile picture
+        // Fetch full user profile to get profile picture
         const userProfile = await getCurrentUserProfile();
-        if (userProfile && userProfile.profile_pic) {
-          // Check if it's already a full URL
-          let profilePicUrl = userProfile.profile_pic;
-          if (!profilePicUrl.startsWith('http')) {
-            // If it's a relative URL, prepend the server URL
-            profilePicUrl = `http://localhost:3000${profilePicUrl}`;
+        if (userProfile) {
+          // Store username in session storage to ensure it's up to date
+          if (userProfile.uname) {
+            storeCurrentUsername(userProfile.uname);
+            setUsername(userProfile.uname);
           }
-          setProfilePicture(profilePicUrl);
-          console.log("Profile picture loaded:", profilePicUrl);
+          
+          // Handle profile picture if available
+          if (userProfile.profile_pic) {
+            // Use the normalizeImageUrl utility for consistent URL handling
+            const profilePicUrl = normalizeImageUrl(userProfile.profile_pic, 'profiles');
+            setProfilePicture(profilePicUrl);
+          }
         }
       } catch (error) {
         console.error('Error fetching user profile in navbar:', error);
@@ -46,7 +50,6 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
     
     // Listen for profile updates
     const unsubscribe = onProfileUpdate(() => {
-      console.log('Profile updated, refreshing navbar data');
       fetchUserData();
     });
     

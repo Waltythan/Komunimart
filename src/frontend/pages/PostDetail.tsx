@@ -7,6 +7,7 @@ import { getSessionData } from '../../services/authServices';
 import PostActions from '../components/PostActions';
 import CommentActions from '../components/CommentActions';
 import { addBookmark, removeBookmark, checkBookmarkStatus } from '../../services/bookmarkServices';
+import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
 
 // Komentar dari backend
 interface Comment {
@@ -14,7 +15,11 @@ interface Comment {
   author_id: string;
   text: string;             // backend pakai kolom "text"
   parent_id?: string | null; // Untuk reply
-  author_name?: string;     // opsional, jika backend mengirim nama user
+  author?: {                // author data from backend
+    user_id: string;
+    uname: string;
+    profile_pic?: string;
+  };
   image_url?: string | null; // URL gambar (opsional)
   created_at?: string;      // timestamp
 }
@@ -81,7 +86,7 @@ const PostDetail: React.FC = () => {
         
         if (commentRes.ok) {
           const commentData = await commentRes.json();
-          // Add author names from response
+          // Use author data from backend response
           const enhancedComments = commentData.map((comment: Comment) => ({
             ...comment,
             created_at: comment.created_at || new Date().toISOString(),
@@ -107,8 +112,7 @@ const PostDetail: React.FC = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      
-      if (commentRes.ok) {
+        if (commentRes.ok) {
         const commentData = await commentRes.json();
         const enhancedComments = commentData.map((comment: Comment) => ({
           ...comment,
@@ -229,14 +233,16 @@ const PostDetail: React.FC = () => {
       setReplyToName(null);
       setSelectedImage(null);
       setImagePreview(null);
-      
-      // Refresh comments
-      const commentRes = await fetch(`http://localhost:3000/api/posts/${postId}/comments`);
+        // Refresh comments
+      const commentRes = await fetch(`http://localhost:3000/api/posts/${postId}/comments`, {
+        headers: {
+          'Authorization': `Bearer ${getSessionData()}`
+        }
+      });
       if (commentRes.ok) {
-        const commentData = await commentRes.json();        // Add placeholder author names
+        const commentData = await commentRes.json();
         const enhancedComments = commentData.map((comment: Comment) => ({
           ...comment,
-          author_name: `User ${comment.author_id?.substring(0, 5) || 'Unknown'}`,
           created_at: comment.created_at || new Date().toISOString(),
         }));
         setComments(enhancedComments);
@@ -305,24 +311,52 @@ const PostDetail: React.FC = () => {
         key={comment.comment_id} 
         className={`comment-item ${level > 0 ? 'reply-comment' : ''}`} 
         style={{ marginLeft: level * 24 }}
-      >
-        <div className="comment-header">
-          <div className="comment-author">
-            <div className="author-avatar">
-              <span>{comment.author_name?.charAt(0).toUpperCase() || 'U'}</span>
+      >        <div className="comment-header">
+          <div className="comment-author">            <div className="author-avatar">              {comment.author?.profile_pic ? (
+                <img 
+                  src={normalizeImageUrl(comment.author.profile_pic, 'profiles')}
+                  alt={comment.author.uname}
+                  onError={(e) => {
+                    console.error(`Failed to load comment author profile image: ${e.currentTarget.src}`);
+                    
+                    // Try direct URL fallback
+                    const currentSrc = e.currentTarget.src;
+                    if (currentSrc.includes('/uploads/profiles/') && comment.author?.profile_pic) {
+                      const filename = comment.author.profile_pic.split('/').pop();
+                      e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                      return;
+                    }
+                    
+                    // Final fallback: hide image and show initial
+                    const target = e.currentTarget as HTMLImageElement;
+                    target.style.display = 'none';
+                    const span = target.nextElementSibling as HTMLSpanElement;
+                    if (span) span.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <span style={{ display: comment.author?.profile_pic ? 'none' : 'flex' }}>
+                {comment.author?.uname?.charAt(0).toUpperCase() || 'U'}
+              </span>
             </div>
             <div className="comment-content">
               <div className="comment-bubble">
-                <div className="author-name">{comment.author_name || `User #${comment.author_id}`}</div>
+                <div className="author-name">{comment.author?.uname || `User #${comment.author_id}`}</div>
                 <div className="comment-text">{comment.text}</div>
-                
-                {comment.image_url && (
-                  <div className="comment-image">
-                    <img 
-                      src={`http://localhost:3000/uploads/comments/${comment.image_url}`}
+                  {comment.image_url && (                <div className="comment-image">                      <img 
+                      src={normalizeImageUrl(comment.image_url, 'comments')}
                       alt="Comment attachment"
                       onError={(e) => {
-                        e.currentTarget.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMIAwIDYwMCA0MDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjRjBGMkY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2NTY3NkIiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiI+SW1hZ2UgTm90IEZvdW5kPC90ZXh0Pgo8L3N2Zz4=";
+                        // Try direct URL without type folder as fallback
+                        const currentSrc = e.currentTarget.src;
+                        if (currentSrc.includes('/uploads/comments/') && comment.image_url) {
+                          const filename = comment.image_url.split('/').pop();
+                          e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                          return;
+                        }
+                        
+                        // Final fallback: placeholder image
+                        e.currentTarget.src = getFallbackImageSrc(200, 150, 12);
                       }}
                     />
                   </div>
@@ -335,13 +369,12 @@ const PostDetail: React.FC = () => {
                   onClick={() => handleLikeComment(comment.comment_id)}
                 >
                   Like
-                </button>
-                <button 
+                </button>                <button 
                   className="action-link"
-                  onClick={() => handleReply(comment.comment_id, comment.author_name)}
+                  onClick={() => handleReply(comment.comment_id, comment.author?.uname)}
                 >
                   Reply
-                </button>                <span className="comment-time">
+                </button><span className="comment-time">
                   {formatDate(comment.created_at || new Date().toISOString())}
                 </span>
                 {commentLikes[comment.comment_id] > 0 && (
@@ -496,14 +529,35 @@ const PostDetail: React.FC = () => {
 
   return (
     <div className="post-detail-container">
-      <div className="post-card">
-        <div className="post-header">
-          <div className="post-author">
-            <div className="author-avatar">
-              <span>{post.author_name?.charAt(0).toUpperCase() || 'U'}</span>
+      <div className="post-card">        <div className="post-header">
+          <div className="post-author">            <div className="author-avatar">              {post.author?.profile_pic ? (                <img 
+                  src={normalizeImageUrl(post.author.profile_pic, 'profiles')}
+                  alt={post.author.uname}
+                  onError={(e) => {
+                    // Try direct URL without type folder as a fallback
+                    const currentSrc = e.currentTarget.src;
+                    if (currentSrc.includes('/uploads/profiles/')) {
+                      const filename = post.author.profile_pic.split('/').pop();
+                      if (filename) {
+                        e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                        return;
+                      }
+                    }
+                    
+                    // If that also fails, hide the image and show the initials
+                    const target = e.currentTarget as HTMLImageElement;
+                    target.style.display = 'none';
+                    const span = target.nextElementSibling as HTMLSpanElement;
+                    if (span) span.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <span style={{ display: post.author?.profile_pic ? 'none' : 'flex' }}>
+                {post.author?.uname?.charAt(0).toUpperCase() || 'U'}
+              </span>
             </div>
             <div className="author-info">
-              <div className="author-name">{post.author_name || `User #${post.author_id}`}</div>
+              <div className="author-name">{post.author?.uname || `User #${post.author_id}`}</div>
               <div className="post-time">{formatDate(post.created_at || new Date().toISOString())}</div>
             </div>
           </div>
@@ -518,15 +572,22 @@ const PostDetail: React.FC = () => {
 
         <div className="post-content">
           <h1 className="post-title">{post.title}</h1>
-          <p className="post-body">{post.content}</p>
-          
-          {post.image_url && (
+          <p className="post-body">{post.content}</p>          {post.image_url && post.image_url.trim() !== '' && (
             <div className="post-image">
               <img 
-                src={`http://localhost:3000/uploads/posts/${post.image_url}`}
+                src={normalizeImageUrl(post.image_url, 'posts')}
                 alt={post.title}
                 onError={(e) => {
-                  e.currentTarget.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDYwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjBGMkY1Ii8+Cjx0ZXh0IHg9IjMwMCIgeT0iMjEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjU2NzZCIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiPkltYWdlIE5vdCBGb3VuZDwvdGV4dD4KPC9zdmc+";
+                  // Try direct URL without type folder as fallback
+                  const currentSrc = e.currentTarget.src;
+                  if (currentSrc.includes('/uploads/posts/')) {
+                    const filename = post.image_url?.split('/').pop();
+                    e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                    return;
+                  }
+                  
+                  // Final fallback: placeholder image
+                  e.currentTarget.src = getFallbackImageSrc(600, 400, 18);
                 }}
               />
             </div>

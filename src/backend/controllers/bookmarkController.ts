@@ -113,17 +113,39 @@ export const getUserBookmarks = async (req: Request, res: Response) => {
       ],
       order: [['created_at', 'DESC']]
     });
-
+    
     // Map bookmarks to include the bookmark creation date as 'bookmarkCreatedAt'
-    const formatted = bookmarks.map((b: any) => {
-      const plain = b.toJSON();
-      return {
-        ...plain.post, // all post info
-        bookmarkCreatedAt: plain.createdAt || plain.created_at // add bookmark creation date
-      };
-    });
+    // and get actual like/comment counts for each post
+    const formattedBookmarks = [];
+    
+    for (const bookmark of bookmarks) {
+      const plain = bookmark.toJSON();
+      const postId = plain.post_id;
+      
+      // Get actual like count for this post
+      const likesCount = await db.Like.count({
+        where: {
+          likeable_id: postId,
+          likeable_type: 'Post'
+        }
+      });
+      
+      // Get actual comment count for this post
+      const commentsCount = await db.Comment.count({
+        where: { post_id: postId }
+      });
 
-    res.status(200).json(formatted);
+      formattedBookmarks.push({
+        ...plain.post, // all post info
+        author: plain.post.author,
+        group: plain.post.group,
+        likes_count: likesCount,
+        comments_count: commentsCount,
+        bookmarkCreatedAt: plain.createdAt || plain.created_at
+      });
+    }
+
+    res.status(200).json(formattedBookmarks);
   } catch (err) {
     console.error('Error fetching user bookmarks:', err);
     res.status(500).json({ error: 'Failed to fetch bookmarks' });

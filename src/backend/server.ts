@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
+import fs from 'fs-extra';
 const db = require('../../models');
 const { User } = db;
 const dbConfig = require('../../config/config.json').development;
@@ -62,18 +63,10 @@ app.post('/auth/register', async (req: Request, res: Response) => {
 
     // Hash password before storing
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const newUser = await User.create({
+    const hashedPassword = await bcrypt.hash(password, saltRounds);    const newUser = await User.create({
       uname,
       email,
       password: hashedPassword, // Store hashed password
-    });
-
-    console.log('✅ User registered:', {
-      id: newUser.user_id,
-      uname: newUser.uname,
-      email: newUser.email,
     });
 
     res.status(201).json({
@@ -123,18 +116,12 @@ app.post('/auth/login', async (req: Request, res: Response) => {
     
     // Compare password
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    
-    if (!isPasswordValid) {
+      if (!isPasswordValid) {
       res.status(401).json({ message: 'Invalid credentials.' });
       return;
-    }    const token = generateToken(user.user_id, user.uname);
-    console.log('✅ Generated token:', token);
+    }
     
-    console.log('✅ Login successful:', {
-      id: user.user_id,
-      uname: user.uname,
-      email: user.email,
-    });
+    const token = generateToken(user.user_id, user.uname);
     
     // Return user data
     res.status(200).json({
@@ -176,6 +163,33 @@ app.get('/me', authenticateJWT, async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error('Error fetching current user:', err);
+    res.status(500).json({ 
+      message: 'Error fetching user data',
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+// Get user by ID endpoint
+app.get('/users/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findByPk(userId, {
+      attributes: ['user_id', 'uname', 'email', 'profile_pic', 'created_at']
+    });
+    
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    
+    res.json({
+      ...user.toJSON(),
+      profile_pic: getImageUrl(user.profile_pic, 'profile')
+    });
+  } catch (err) {
+    console.error('Error fetching user:', err);
     res.status(500).json({ 
       message: 'Error fetching user data',
       error: err instanceof Error ? err.message : String(err),
@@ -247,24 +261,15 @@ app.put('/profile/update', authenticateJWT, async (req: Request, res: Response) 
 
 // Upload profile picture (protected)
 app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: Request, res: Response) => {
-  console.log('🖼️ Profile image upload request received');
-  console.log('📁 File:', req.file);
-  console.log('👤 Request body:', req.body);
-  
   if (!req.file) {
-    console.log('❌ No file uploaded');
     res.status(400).json({ message: 'No file uploaded' });
     return;
   }
     try {
     // Use req.user exclusively since multer overwrites req.body
     const user_id = req.user?.userId;
-    console.log('🔍 Looking for user with ID:', user_id);
-    console.log('👤 req.user:', req.user);
-    console.log('📝 req.body (after multer):', req.body);
     
     if (!user_id) {
-      console.log('❌ No user ID found in req.user');
       res.status(401).json({ message: 'Authentication failed - user ID not found' });
       return;
     }
@@ -272,12 +277,9 @@ app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: 
     // Update user profile
     const user = await User.findByPk(user_id);
     if (!user) {
-      console.log('❌ User not found with ID:', user_id);
       res.status(404).json({ message: 'User not found' });
       return;
     }
-    
-    console.log('✅ User found:', user.uname);
     
     // Delete old profile picture if exists
     if (user.profile_pic) {
@@ -285,13 +287,12 @@ app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: 
         const { deleteFile } = require('./utils/fileManager');
         await deleteFile(user.profile_pic, 'profile');
       } catch (deleteErr) {
-        console.log('Could not delete old profile picture:', deleteErr);
+        // Silently continue if deletion fails
       }
     }
     
     // Save filename to database
     await user.update({ profile_pic: req.file.filename });
-    console.log('✅ Profile picture updated successfully');
     
     // Return success with image URL
     res.json({
@@ -310,6 +311,8 @@ app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
+// Serve uploads directory
+
 // Use group routes
 app.use('/api/groups', groupRoutes);
 // Use post routes
@@ -323,19 +326,16 @@ app.use('/api/bookmarks', bookmarkRoutes);
 // Use user routes
 app.use('/api/users', userRoutes);
 
+
+
+
+
+
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
   console.log(`🗄️ Connected to DB: ${dbConfig.database} as ${dbConfig.username} @ ${dbConfig.host}:${dbConfig.port}`);
 });
 
-app.get('/debug/users', async (req, res) => {
-  try {
-    const users = await User.findAll({ order: [['user_id', 'DESC']] });
-    console.log('🔍 Users from DB:', users.map((u: any) => u.toJSON()));
-    res.json(users);
-  } catch (err) {
-    console.error('❌ Failed to fetch users:', err);
-    res.status(500).json({ message: 'Error fetching users' });
-  }
-});
+

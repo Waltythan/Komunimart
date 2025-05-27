@@ -2,6 +2,21 @@
 import { jwtDecode } from "jwt-decode";
 import { getSessionData } from "./authServices";
 
+// Initialize the stored username when this module is first loaded
+(function initializeStoredUsername() {
+  const token = getSessionData();
+  if (token) {
+    try {
+      const decoded = jwtDecode<{ userId: string; username: string }>(token);
+      if (decoded.username) {
+        sessionStorage.setItem('current_username', decoded.username);
+      }
+    } catch (error) {
+      console.error('Error initializing stored username:', error);
+    }
+  }
+})();
+
 export interface DecodedToken {
   userId: string;
   username: string;
@@ -20,12 +35,24 @@ export function getCurrentUserId(): string | null {
   }
 }
 
+// Store username in session storage for easy access without token decoding
+export function storeCurrentUsername(username: string): void {
+  sessionStorage.setItem('current_username', username);
+}
+
 export function getCurrentUsername(): string | null {
+  // First try to get from session storage (most up-to-date)
+  const storedUsername = sessionStorage.getItem('current_username');
+  if (storedUsername) return storedUsername;
+  
+  // Fall back to token if no stored username
   const token = getSessionData();
   if (!token) return null;
 
   try {
     const decoded = jwtDecode<DecodedToken>(token);
+    // Store for future use
+    storeCurrentUsername(decoded.username);
     return decoded.username;
   } catch {
     return null;
@@ -36,19 +63,18 @@ export function getCurrentUsername(): string | null {
 export async function getUserById(userId: string): Promise<any> {
   try {
     const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/debug/users`);
+    const response = await fetch(`http://localhost:3000/users/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
     
     if (!response.ok) {
       throw new Error('Failed to fetch user data');
     }
     
-    const users = await response.json();
-    const user = users.find((u: any) => u.user_id === userId);
-    
-    if (!user) {
-      throw new Error('User not found');
-    }
-    
+    const user = await response.json();
     return user;
   } catch (error) {
     console.error('Error fetching user details:', error);
@@ -145,7 +171,17 @@ export async function updateUserProfile(profileData: { uname?: string; email?: s
       throw new Error(errorData.message || 'Failed to update profile');
     }
     
-    return await response.json();
+    const result = await response.json();
+    
+    // If username was updated, store it in session storage
+    if (profileData.uname) {
+      storeCurrentUsername(profileData.uname);
+    }
+    
+    // Notify all listeners that profile was updated
+    notifyProfileUpdate();
+    
+    return result;
   } catch (error) {
     console.error('Error updating user profile:', error);
     throw error;
