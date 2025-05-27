@@ -36,19 +36,18 @@ export function getCurrentUsername(): string | null {
 export async function getUserById(userId: string): Promise<any> {
   try {
     const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/debug/users`);
+    const response = await fetch(`http://localhost:3000/users/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
     
     if (!response.ok) {
       throw new Error('Failed to fetch user data');
     }
     
-    const users = await response.json();
-    const user = users.find((u: any) => u.user_id === userId);
-    
-    if (!user) {
-      throw new Error('User not found');
-    }
-    
+    const user = await response.json();
     return user;
   } catch (error) {
     console.error('Error fetching user details:', error);

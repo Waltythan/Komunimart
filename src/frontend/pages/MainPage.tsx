@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getGroupMemberCount } from '../../services/membershipServices';
-import { normalizeImageUrl, getFallbackImageSrc, debugImageUrl } from '../utils/imageHelper';
+import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
 import '../styles/MainPage.css';
 
 interface Post {
@@ -113,18 +113,13 @@ const MainPage: React.FC = () => {
         <div className="group-cover-image">          {group.image_url ? (
             <img 
               src={normalizeImageUrl(group.image_url, 'groups')}
-              alt={group.name}
-              onError={(e) => {
-                console.error(`Failed to load group banner image: ${e.currentTarget.src}`);
-                debugImageUrl(group.image_url);
-                
+              alt={group.name}              onError={(e) => {
                 // Try direct URL without type folder as a fallback
                 const currentSrc = e.currentTarget.src;
                 if (currentSrc.includes('/uploads/groups/') && group.image_url) {
                   const filename = group.image_url.split('/').pop();
                   if (filename) {
                     e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
-                    console.log('Trying fallback group URL:', e.currentTarget.src);
                     return;
                   }
                 }
@@ -265,17 +260,13 @@ const MainPage: React.FC = () => {
                       <div className="post-image">
                         <img
                           src={normalizeImageUrl(post.image_url, 'posts')}
-                          alt={post.title}
-                          onError={(e) => {
-                            console.error(`Failed to load post image: ${e.currentTarget.src}`);
-                            debugImageUrl(post.image_url);
-                              // Try direct URL without type folder as a fallback
+                          alt={post.title}                          onError={(e) => {
+                            // Try direct URL without type folder as a fallback
                             const currentSrc = e.currentTarget.src;
                             if (currentSrc.includes('/uploads/posts/') && post.image_url) {
                               const filename = post.image_url.split('/').pop();
                               if (filename) {
                                 e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
-                                console.log('Trying fallback post URL:', e.currentTarget.src);
                                 return;
                               }
                             }

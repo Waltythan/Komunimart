@@ -62,11 +62,8 @@ export const deleteGroup = async (req: Request, res: Response) => {
     const userId = user_id || deleted_by;
     
     if (!userId) {
-      res.status(400).json({ error: 'User ID is required' });
-      return;
+      res.status(400).json({ error: 'User ID is required' });    return;
     }
-    
-    console.log(`Deleting group ${groupId} by user ${userId}`);
     
     // Find the group
     const group = await db.Group.findByPk(groupId);
@@ -75,17 +72,9 @@ export const deleteGroup = async (req: Request, res: Response) => {
       return;
     }
     
-    // Authentication and admin check is already handled by middlewares
-    // We don't need to check again, but we can log for audit purposes
-    console.log(`Group ${groupId} deletion initiated by user ${userId}`);
-    
-    // For debugging, log if this is the creator
-    if (group.created_by === userId) {
-      console.log(`User ${userId} is the creator of group ${groupId}`);
-    }    // Delete all related data in order (foreign key constraints)
+    // Delete all related data in order (foreign key constraints)
     // 1. Instead of using literal SQL, use the safer approach with Sequelize queries
     try {
-      console.log('Finding all posts for this group...');
       // First find all posts in this group
       const posts = await db.Post.findAll({
         where: { group_id: groupId },
@@ -93,11 +82,9 @@ export const deleteGroup = async (req: Request, res: Response) => {
       });
       
       const postIds = posts.map((post: { post_id: number }) => post.post_id);
-      console.log(`Found ${postIds.length} posts to delete`);
       
       // If there are any posts, delete related comments
       if (postIds.length > 0) {
-        console.log('Deleting comments for posts...');
         await db.Comment.destroy({
           where: {
             post_id: {
@@ -110,9 +97,9 @@ export const deleteGroup = async (req: Request, res: Response) => {
       console.error('Error deleting comments:', err);
       throw err; // Re-throw to be caught by the main try-catch
     }
-      // 2. Delete all posts in this group
+    
+    // 2. Delete all posts in this group
     try {
-      console.log('Deleting posts for group...');
       await db.Post.destroy({
         where: { group_id: groupId }
       });
@@ -123,7 +110,6 @@ export const deleteGroup = async (req: Request, res: Response) => {
     
     // 3. Delete all memberships
     try {
-      console.log('Deleting group memberships...');
       await db.GroupMembership.destroy({
         where: { group_id: groupId }
       });
@@ -134,7 +120,6 @@ export const deleteGroup = async (req: Request, res: Response) => {
     
     // 4. Finally delete the group
     try {
-      console.log('Deleting group...');
       await group.destroy();
     } catch (err) {
       console.error('Error deleting the group:', err);
@@ -143,7 +128,7 @@ export const deleteGroup = async (req: Request, res: Response) => {
     
     res.status(200).json({
       message: 'Group deleted successfully'
-    });  } catch (err: any) { // Type as any for Sequelize errors
+    });} catch (err: any) { // Type as any for Sequelize errors
     console.error('Error deleting group:', err);
     
     // Provide more detailed error message

@@ -6,7 +6,7 @@ import { getCurrentUserId } from '../../services/userServices';
 import { getSessionData } from '../../services/authServices';
 import PostActions from '../components/PostActions';
 import CommentActions from '../components/CommentActions';
-import { normalizeImageUrl, getFallbackImageSrc, debugImageUrl } from '../utils/imageHelper';
+import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
 
 // Komentar dari backend
 interface Comment {
@@ -351,9 +351,6 @@ const PostDetail: React.FC = () => {
                       src={normalizeImageUrl(comment.image_url, 'comments')}
                       alt="Comment attachment"
                       onError={(e) => {
-                        console.error(`Failed to load comment image: ${e.currentTarget.src}`);
-                        debugImageUrl(comment.image_url);
-                        
                         // Try direct URL without type folder as fallback
                         const currentSrc = e.currentTarget.src;
                         if (currentSrc.includes('/uploads/comments/') && comment.image_url) {
@@ -517,21 +514,16 @@ const PostDetail: React.FC = () => {
   return (
     <div className="post-detail-container">
       <div className="post-card">        <div className="post-header">
-          <div className="post-author">            <div className="author-avatar">              {post.author?.profile_pic ? (
-                <img 
+          <div className="post-author">            <div className="author-avatar">              {post.author?.profile_pic ? (                <img 
                   src={normalizeImageUrl(post.author.profile_pic, 'profiles')}
                   alt={post.author.uname}
                   onError={(e) => {
-                    console.error(`Failed to load profile image: ${e.currentTarget.src}`);
-                    debugImageUrl(post.author.profile_pic);
-                    
                     // Try direct URL without type folder as a fallback
                     const currentSrc = e.currentTarget.src;
                     if (currentSrc.includes('/uploads/profiles/')) {
                       const filename = post.author.profile_pic.split('/').pop();
                       if (filename) {
                         e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
-                        console.log('Trying fallback profile URL:', e.currentTarget.src);
                         return;
                       }
                     }
@@ -570,26 +562,16 @@ const PostDetail: React.FC = () => {
                 src={normalizeImageUrl(post.image_url, 'posts')}
                 alt={post.title}
                 onError={(e) => {
-                  console.error(`❌ PostDetail: Failed to load post image: ${e.currentTarget.src}`);
-                  console.log(`📝 PostDetail: Original image_url: "${post.image_url}"`);
-                  debugImageUrl(post.image_url);
-                  
                   // Try direct URL without type folder as fallback
                   const currentSrc = e.currentTarget.src;
                   if (currentSrc.includes('/uploads/posts/')) {
                     const filename = post.image_url?.split('/').pop();
-                    const fallbackUrl = `http://localhost:3000/uploads/${filename}`;
-                    console.log(`🔄 PostDetail: Trying fallback URL: ${fallbackUrl}`);
-                    e.currentTarget.src = fallbackUrl;
+                    e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
                     return;
                   }
                   
                   // Final fallback: placeholder image
-                  console.log('🎨 PostDetail: Using placeholder fallback');
                   e.currentTarget.src = getFallbackImageSrc(600, 400, 18);
-                }}
-                onLoad={(e) => {
-                  console.log(`✅ PostDetail: Successfully loaded post image: ${e.currentTarget.src}`);
                 }}
               />
             </div>

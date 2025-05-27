@@ -61,18 +61,10 @@ app.post('/auth/register', async (req: Request, res: Response) => {
 
     // Hash password before storing
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const newUser = await User.create({
+    const hashedPassword = await bcrypt.hash(password, saltRounds);    const newUser = await User.create({
       uname,
       email,
       password: hashedPassword, // Store hashed password
-    });
-
-    console.log('✅ User registered:', {
-      id: newUser.user_id,
-      uname: newUser.uname,
-      email: newUser.email,
     });
 
     res.status(201).json({
@@ -122,18 +114,12 @@ app.post('/auth/login', async (req: Request, res: Response) => {
     
     // Compare password
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    
-    if (!isPasswordValid) {
+      if (!isPasswordValid) {
       res.status(401).json({ message: 'Invalid credentials.' });
       return;
-    }    const token = generateToken(user.user_id, user.uname);
-    console.log('✅ Generated token:', token);
+    }
     
-    console.log('✅ Login successful:', {
-      id: user.user_id,
-      uname: user.uname,
-      email: user.email,
-    });
+    const token = generateToken(user.user_id, user.uname);
     
     // Return user data
     res.status(200).json({
@@ -175,6 +161,33 @@ app.get('/me', authenticateJWT, async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error('Error fetching current user:', err);
+    res.status(500).json({ 
+      message: 'Error fetching user data',
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+// Get user by ID endpoint
+app.get('/users/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findByPk(userId, {
+      attributes: ['user_id', 'uname', 'email', 'profile_pic', 'created_at']
+    });
+    
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    
+    res.json({
+      ...user.toJSON(),
+      profile_pic: getImageUrl(user.profile_pic, 'profile')
+    });
+  } catch (err) {
+    console.error('Error fetching user:', err);
     res.status(500).json({ 
       message: 'Error fetching user data',
       error: err instanceof Error ? err.message : String(err),
@@ -246,24 +259,15 @@ app.put('/profile/update', authenticateJWT, async (req: Request, res: Response) 
 
 // Upload profile picture (protected)
 app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: Request, res: Response) => {
-  console.log('🖼️ Profile image upload request received');
-  console.log('📁 File:', req.file);
-  console.log('👤 Request body:', req.body);
-  
   if (!req.file) {
-    console.log('❌ No file uploaded');
     res.status(400).json({ message: 'No file uploaded' });
     return;
   }
     try {
     // Use req.user exclusively since multer overwrites req.body
     const user_id = req.user?.userId;
-    console.log('🔍 Looking for user with ID:', user_id);
-    console.log('👤 req.user:', req.user);
-    console.log('📝 req.body (after multer):', req.body);
     
     if (!user_id) {
-      console.log('❌ No user ID found in req.user');
       res.status(401).json({ message: 'Authentication failed - user ID not found' });
       return;
     }
@@ -271,12 +275,9 @@ app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: 
     // Update user profile
     const user = await User.findByPk(user_id);
     if (!user) {
-      console.log('❌ User not found with ID:', user_id);
       res.status(404).json({ message: 'User not found' });
       return;
     }
-    
-    console.log('✅ User found:', user.uname);
     
     // Delete old profile picture if exists
     if (user.profile_pic) {
@@ -284,13 +285,12 @@ app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: 
         const { deleteFile } = require('./utils/fileManager');
         await deleteFile(user.profile_pic, 'profile');
       } catch (deleteErr) {
-        console.log('Could not delete old profile picture:', deleteErr);
+        // Silently continue if deletion fails
       }
     }
     
     // Save filename to database
     await user.update({ profile_pic: req.file.filename });
-    console.log('✅ Profile picture updated successfully');
     
     // Return success with image URL
     res.json({
@@ -309,14 +309,7 @@ app.post('/profile/image', authenticateJWT, upload.single('image'), async (req: 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
-// For debugging - log all image requests
-app.use('/uploads', (req, res, next) => {
-  console.log(`🖼️ Image request: ${req.path}`);
-  if (!fs.existsSync(path.join(__dirname, '../../uploads', req.path))) {
-    console.log(`❌ Image not found: ${req.path}`);
-  }
-  next();
-});
+// Serve uploads directory
 
 // Use group routes
 app.use('/groups', groupRoutes);
@@ -327,119 +320,11 @@ app.use('/memberships', membershipRoutes);
 // Use protected post routes (requiring membership)
 app.use('/protected-posts', protectedPostRoutes);
 
-// Test endpoint to create a post with the test image (for debugging only)
-app.get('/test/create-post', async (req: Request, res: Response) => {
-  try {
-    // First, find a group to add the post to
-    const group = await db.Group.findOne();
-    if (!group) {
-      res.status(404).json({ message: 'No groups found' });
-      return;
-    }
 
-    // Find a user to be the author
-    const user = await User.findOne();
-    if (!user) {
-      res.status(404).json({ message: 'No users found' });
-      return;
-    }
 
-    // Create a test post with our test image
-    const post = await db.Post.create({
-      title: 'Test Post with Image',
-      content: 'This is a test post to verify image display functionality.',
-      group_id: group.group_id,
-      author_id: user.user_id,
-      image_url: 'test-post-image.png' // This matches the file we copied earlier
-    });
 
-    res.json({ 
-      message: 'Test post created successfully',
-      post_id: post.post_id,
-      image_url: getImageUrl(post.image_url, 'post')
-    });
-  } catch (error) {
-    console.error('Error creating test post:', error);
-    res.status(500).json({ error: 'Failed to create test post' });
-  }
-});
 
-// Test login endpoint (for debugging only)
-app.get('/test/login', async (req: Request, res: Response) => {
-  try {
-    // Find the first user
-    const user = await User.findOne();
-    if (!user) {
-      res.status(404).json({ message: 'No users found' });
-      return;
-    }
 
-    // Generate a token for testing
-    const token = generateToken(user.user_id, user.uname);
-    
-    res.json({
-      message: 'Test login successful',
-      token,
-      user: {
-        user_id: user.user_id,
-        uname: user.uname,
-        email: user.email
-      }
-    });
-  } catch (error) {
-    console.error('Error in test login:', error);
-    res.status(500).json({ error: 'Failed to test login' });
-  }
-});
-
-// Test endpoint to add user to group (for debugging only)
-app.get('/test/join-group/:groupId', async (req: Request, res: Response) => {
-  try {
-    const { groupId } = req.params;
-    
-    // Find the first user
-    const user = await User.findOne();
-    if (!user) {
-      res.status(404).json({ message: 'No users found' });
-      return;
-    }
-
-    // Check if group exists
-    const group = await db.Group.findByPk(groupId);
-    if (!group) {
-      res.status(404).json({ message: 'Group not found' });
-      return;
-    }
-
-    // Check if membership already exists
-    const existingMembership = await db.GroupMembership.findOne({
-      where: {
-        user_id: user.user_id,
-        group_id: groupId
-      }
-    });
-
-    if (existingMembership) {
-      res.json({ message: 'User already a member' });
-      return;
-    }
-
-    // Create membership
-    await db.GroupMembership.create({
-      user_id: user.user_id,
-      group_id: groupId
-    });
-
-    res.json({ 
-      message: 'Membership created successfully',
-      user_id: user.user_id,
-      group_id: groupId
-    });
-  } catch (error) {
-    console.error('Error creating membership:', error);
-    res.status(500).json({ error: 'Failed to create membership' });
-  }
-});
 
 // Start server
 app.listen(PORT, () => {
@@ -447,13 +332,4 @@ app.listen(PORT, () => {
   console.log(`🗄️ Connected to DB: ${dbConfig.database} as ${dbConfig.username} @ ${dbConfig.host}:${dbConfig.port}`);
 });
 
-app.get('/debug/users', async (req, res) => {
-  try {
-    const users = await User.findAll({ order: [['user_id', 'DESC']] });
-    console.log('🔍 Users from DB:', users.map((u: any) => u.toJSON()));
-    res.json(users);
-  } catch (err) {
-    console.error('❌ Failed to fetch users:', err);
-    res.status(500).json({ message: 'Error fetching users' });
-  }
-});
+

@@ -7,7 +7,7 @@ import MembersList from '../components/MembersList';
 import AdminPanel from '../components/AdminPanel';
 import { getSessionData } from '../../services/authServices';
 import { getUserById } from '../../services/userServices';
-import { normalizeImageUrl, getFallbackImageSrc, debugImageUrl, BACKEND_URL } from '../utils/imageHelper';
+import { normalizeImageUrl, getFallbackImageSrc, BACKEND_URL } from '../utils/imageHelper';
 
 interface GroupDetails {
   group_id: string;
@@ -42,16 +42,8 @@ const GroupDetailPage: React.FC = () => {
         // Fetch group details
         const groupRes = await fetch(`http://localhost:3000/groups`);
         if (groupRes.ok) {
-          const groups = await groupRes.json();
-          const group = groups.find((g: any) => String(g.group_id) === groupId);
+          const groups = await groupRes.json();          const group = groups.find((g: any) => String(g.group_id) === groupId);
           if (group) {
-            // Debug image URL format
-            console.log('Group image URL format:', {
-              original: group.image_url,
-              isString: typeof group.image_url === 'string',
-              isEmpty: !group.image_url
-            });
-            
             setGroupDetails(group);
             // Fetch creator details
             const creatorRes = await getUserById(group.created_by);
@@ -148,14 +140,10 @@ const GroupDetailPage: React.FC = () => {
   if (!groupDetails) return <div className="error-message">Group not found</div>;
   return (
     <div className="group-detail-container">
-      <div className="group-header">        <div className="group-image-container">          {groupDetails.image_url ? (
-            <img 
+      <div className="group-header">        <div className="group-image-container">          {groupDetails.image_url ? (            <img 
               src={normalizeImageUrl(groupDetails.image_url, 'groups')}
               alt={`${groupDetails.name} cover image`}
               className="group-cover-image"              onError={(e) => {
-                console.error(`Failed to load group image: ${e.currentTarget.src}`);
-                debugImageUrl(groupDetails.image_url);
-                
                 if (groupDetails.image_url) {
                   const filename = groupDetails.image_url.split('/').pop();
                   if (filename) {
@@ -165,14 +153,12 @@ const GroupDetailPage: React.FC = () => {
                     // If we're currently trying from groups subfolder, try root next
                     if (currentSrc.includes('/uploads/groups/')) {
                       e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
-                      console.log('Trying group image from root uploads dir:', e.currentTarget.src);
                       return;
                     }
                     
                     // If we're trying from root, try the groups subfolder next
                     if (currentSrc.includes('/uploads/') && !currentSrc.includes('/uploads/groups/')) {
                       e.currentTarget.src = `${BACKEND_URL}/uploads/groups/${filename}`;
-                      console.log('Trying group image from groups subfolder:', e.currentTarget.src);
                       return;
                     }
                   }
@@ -250,15 +236,11 @@ const GroupDetailPage: React.FC = () => {
                             <img 
                               src={normalizeImageUrl(post.author.profile_pic, 'profiles')}
                               alt={post.author.uname}                              onError={(e) => {
-                                console.error(`Failed to load profile image: ${e.currentTarget.src}`);
-                                debugImageUrl(post.author.profile_pic);
-                                
                                 // Try direct URL without type folder as a fallback
                                 const currentSrc = e.currentTarget.src;
                                 if (currentSrc.includes('/uploads/profiles/')) {
                                   const filename = post.author.profile_pic.split('/').pop();
                                   e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
-                                  console.log('Trying fallback profile URL:', e.currentTarget.src);
                                   return;
                                 }
                                 
@@ -292,17 +274,12 @@ const GroupDetailPage: React.FC = () => {
                       <div className="post-preview-image">
                         <img 
                           src={normalizeImageUrl(post.image_url, 'posts')}
-                          alt={post.title}
-                          onError={(e) => {
-                            console.error(`Failed to load post image: ${e.currentTarget.src}`);
-                            debugImageUrl(post.image_url);
-                            
+                          alt={post.title}                          onError={(e) => {
                             // Try direct URL without type folder first as a fallback
                             const currentSrc = e.currentTarget.src;
                             if (currentSrc.includes('/uploads/posts/')) {
                               const filename = post.image_url.split('/').pop();
                               e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
-                              console.log('Trying fallback URL:', e.currentTarget.src);
                               return;
                             }
                             

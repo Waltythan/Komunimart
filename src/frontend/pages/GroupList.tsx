@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getGroupMemberCount } from '../../services/membershipServices';
-import { normalizeImageUrl, getFallbackImageSrc, debugImageUrl } from '../utils/imageHelper';
+import { normalizeImageUrl, getFallbackImageSrc} from '../utils/imageHelper';
 import '../styles/GroupList.css';
 import '../styles/common.css';
 
@@ -121,11 +121,7 @@ const GroupListPage: React.FC = () => {
                     <div className="group-cover-image">
                       <img
                         src={normalizeImageUrl(group.image_url, 'groups')}
-                        alt={group.name}
-                        onError={(e) => {
-                          console.error(`Failed to load group image: ${e.currentTarget.src}`);
-                          debugImageUrl(group.image_url);
-                          
+                        alt={group.name}                        onError={(e) => {
                           // Try direct URL without type folder as fallback
                           const currentSrc = e.currentTarget.src;
                           if (currentSrc.includes('/uploads/groups/')) {

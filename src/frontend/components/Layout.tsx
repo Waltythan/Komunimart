@@ -4,7 +4,7 @@ import Navbar from './Navbar';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import '../styles/Layout.css';
 import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate } from '../../services/userServices';
-import { normalizeImageUrl, getFallbackImageSrc, debugImageUrl } from '../utils/imageHelper';
+import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
 
 interface LayoutProps {
   children: ReactNode;
@@ -99,7 +99,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       
       // Listen for profile updates
       const unsubscribe = onProfileUpdate(() => {
-        console.log('Profile updated, refreshing layout data');
+
         fetchCurrentUser();
       });
       
@@ -172,18 +172,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <div className="sidebar-group-image">                    {group.image_url ? (
                       <img 
                         src={normalizeImageUrl(group.image_url, 'groups')}
-                        alt={group.name}
-                        onError={(e) => {
-                          console.error(`Failed to load sidebar group image: ${e.currentTarget.src}`);
-                          debugImageUrl(group.image_url);
-                          
+                        alt={group.name}                        onError={(e) => {
                           // Try direct URL without type folder as a fallback
                           const currentSrc = e.currentTarget.src;
                           if (currentSrc.includes('/uploads/groups/') && group.image_url) {
                             const filename = group.image_url.split('/').pop();
                             if (filename) {
                               e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
-                              console.log('Trying fallback group URL:', e.currentTarget.src);
                               return;
                             }
                           }

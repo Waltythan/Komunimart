@@ -88,10 +88,8 @@ export const deleteGroup = async (groupId: string): Promise<boolean> => {
       body: JSON.stringify({ deleted_by: userId })
     });    if (!response.ok) {
       let errorMessage = 'Failed to delete group';
-      
-      try {
+        try {
         const errorData = await response.json();
-        console.log('Server error response:', errorData);
         
         if (errorData.error) {
           errorMessage = errorData.error;

@@ -17,18 +17,16 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [username, setUsername] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
-    useEffect(() => {
-    const fetchUserData = async () => {
+    useEffect(() => {    const fetchUserData = async () => {
       try {
         const currentUsername = getCurrentUsername();
         setUsername(currentUsername);
-        console.log("Current username from token:", currentUsername);        // Fetch full user profile to get profile picture
+        // Fetch full user profile to get profile picture
         const userProfile = await getCurrentUserProfile();
         if (userProfile && userProfile.profile_pic) {
           // Use the normalizeImageUrl utility for consistent URL handling
           const profilePicUrl = normalizeImageUrl(userProfile.profile_pic, 'profiles');
           setProfilePicture(profilePicUrl);
-          console.log("Profile picture loaded:", profilePicUrl);
         }
       } catch (error) {
         console.error('Error fetching user profile in navbar:', error);
@@ -42,7 +40,6 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
     
     // Listen for profile updates
     const unsubscribe = onProfileUpdate(() => {
-      console.log('Profile updated, refreshing navbar data');
       fetchUserData();
     });
     

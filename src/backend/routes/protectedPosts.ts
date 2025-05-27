@@ -88,8 +88,6 @@ router.get('/group/:groupId', authenticateJWT, checkGroupMembership, async (req:
     });    // Process posts to include proper image URLs
     const processedPosts = posts.map((post: any) => {
       const postData = post.toJSON();
-      console.log('🖼️ GROUP POST DEBUG - Raw image_url from DB:', postData.image_url);
-      console.log('🖼️ GROUP POST DEBUG - Processed image_url:', getImageUrl(postData.image_url, 'post'));
       return {
         ...postData,
         image_url: getImageUrl(postData.image_url, 'post'),
@@ -154,14 +152,12 @@ router.get('/:postId', authenticateJWT, checkPostAccess, async (req: Request, re
     // Get like count for this post
     const likeCount = await db.Like.count({
       where: {
-        likeable_id: postId,
-        likeable_type: 'post'
+        likeable_id: postId,      likeable_type: 'post'
       }
-    });    // Process the post to include proper image URLs
-    const postData = post.toJSON();
+    });
     
-    console.log('🖼️ POST DEBUG - Raw image_url from DB:', postData.image_url);
-    console.log('🖼️ POST DEBUG - Processed image_url:', getImageUrl(postData.image_url, 'post'));
+    // Process the post to include proper image URLs
+    const postData = post.toJSON();
     
     const processedPost = {
       ...postData,
