@@ -1,14 +1,14 @@
-.comment-actions {
+.comment-delete-container {
   position: relative;
-  display: inline-block;
-  margin-left: 8px;
+  display: flex;
+  align-items: center;
 }
 
 .delete-comment-btn {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 0;
   border-radius: 4px;
   font-size: 14px;
   transition: all 0.2s ease;

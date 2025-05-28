@@ -61,18 +61,16 @@ const CommentActions: React.FC<CommentActionsProps> = ({
     }
 
     setShowConfirm(false);
-  };
-
-  return (
-    <div className="comment-actions">
+  };  return (
+    <div className="comment-delete-container">
       <button 
         className="delete-comment-btn"
         onClick={() => setShowConfirm(true)}
         title="Delete Comment"
+        aria-label="Delete Comment"
       >
         🗑️
       </button>
-      
       {showConfirm && (
         <div className="delete-confirm-modal">
           <div className="delete-confirm-content">

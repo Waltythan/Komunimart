@@ -187,10 +187,9 @@ router.get('/:postId', authenticateJWT, checkPostAccess, async (req: Request, re
 });
 
 // Add a comment to a post - requires group membership
-router.post('/:postId/comments', authenticateJWT, checkPostAccess, upload.single('image'), async (req: Request, res: Response) => {
-  try {
+router.post('/:postId/comments', authenticateJWT, checkPostAccess, upload.single('image'), async (req: Request, res: Response) => {  try {
     const { postId } = req.params;
-    const { content, user_id } = req.body;
+    const { content, user_id, parent_id } = req.body;
     
     if (!content || !user_id) {
       res.status(400).json({ message: 'Content and user_id are required' });
@@ -208,7 +207,8 @@ router.post('/:postId/comments', authenticateJWT, checkPostAccess, upload.single
     const comment = await db.Comment.create({
       post_id: postId,
       author_id: user_id,
-      content,
+      text: content, // Use 'text' field for the Comment model
+      parent_id: parent_id || null,
       image_url: req.file ? req.file.filename : null
     });
     

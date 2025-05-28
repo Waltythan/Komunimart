@@ -14,6 +14,7 @@ import membershipRoutes from './routes/memberships';
 import protectedPostRoutes from './routes/protectedPosts';
 import bookmarkRoutes from './routes/bookmarks';
 import userRoutes from './routes/users';
+import searchRoutes from './routes/search';
 // Import authenticateJWT middleware
 import { authenticateJWT } from './middlewares/auth.middleware';
 
@@ -325,6 +326,8 @@ app.use('/api/protected-posts', protectedPostRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 // Use user routes
 app.use('/api/users', userRoutes);
+// Use search routes
+app.use('/api/search', searchRoutes);
 
 
 

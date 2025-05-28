@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Navbar.css';
 import { clearSessionData } from '../../services/authServices';
 import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate, storeCurrentUsername } from '../../services/userServices';
+import { getSearchSuggestions, SearchSuggestion } from '../../services/searchServices';
 import { normalizeImageUrl } from '../utils/imageHelper';
 
 interface NavbarProps {
@@ -13,8 +14,9 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
   const navigate = useNavigate();
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   useEffect(() => {
@@ -56,10 +58,55 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
     // Cleanup listener on unmount
     return unsubscribe;
   }, []);
-  
-  const handleLogout = () => {
+    const handleLogout = () => {
     clearSessionData();
     window.location.href = '/';
+  };
+
+  // Handle search functionality
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setShowSuggestions(false);
+    }
+  };
+  const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    if (value.trim().length >= 2) {
+      try {
+        const searchSuggestions = await getSearchSuggestions(value.trim(), 5);
+        setSuggestions(searchSuggestions);
+        setShowSuggestions(true);
+      } catch (error) {
+        console.error('Error fetching search suggestions:', error);
+        // Don't show suggestions if there's an error (like authentication issues)
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: SearchSuggestion) => {
+    setSearchQuery(suggestion.title);
+    setShowSuggestions(false);
+    navigate(`/search?q=${encodeURIComponent(suggestion.title)}`);
+  };
+
+  const handleSearchFocus = () => {
+    if (searchQuery.trim().length >= 2 && suggestions.length > 0) {
+      setShowSuggestions(true);
+    }
+  };
+
+  const handleSearchBlur = () => {
+    // Delay hiding suggestions to allow clicking on them
+    setTimeout(() => setShowSuggestions(false), 200);
   };
 
   // Get first letter of username for profile pic
@@ -76,17 +123,55 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
         <h1 className="app-title" onClick={() => navigate('/groups')}>
           {title}
         </h1>        <div className="search-container">
-          <input 
-            type="text" 
-            className="search-input"
-            placeholder="Search Komunimart"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />          <button className="search-button" aria-label="Search">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-            </svg>
-          </button>
+          <form onSubmit={handleSearchSubmit} className="search-form">
+            <input 
+              type="text" 
+              className="search-input"
+              placeholder="Search Komunimart"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onFocus={handleSearchFocus}
+              onBlur={handleSearchBlur}
+            />
+            <button type="submit" className="search-button" aria-label="Search">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+              </svg>
+            </button>
+          </form>
+          
+          {/* Search Suggestions Dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="search-suggestions">
+              {suggestions.map((suggestion) => (
+                <div
+                  key={`${suggestion.type}-${suggestion.id}`}
+                  className="suggestion-item"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                >
+                  <div className="suggestion-icon">
+                    {suggestion.type === 'group' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7Zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5.784 6A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216ZM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
+                        <path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/>
+                      </svg>
+                    )}
+                  </div>
+                  <div className="suggestion-content">
+                    <span className="suggestion-title">{suggestion.title}</span>
+                    {suggestion.groupName && (
+                      <span className="suggestion-group">in {suggestion.groupName}</span>
+                    )}
+                  </div>
+                  <span className="suggestion-type">{suggestion.type}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       
