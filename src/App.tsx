@@ -9,7 +9,7 @@ import NewPostPage from './frontend/pages/NewPostPage';
 import NewGroupPage from './frontend/pages/NewGroupPage';
 import PostDetail from './frontend/pages/PostDetail';
 import ProfilePage from './frontend/pages/ProfilePage';
-import SearchResults from './frontend/pages/SearchResults';
+
 import Layout from './frontend/components/Layout';
 import './App.css';
 
@@ -24,8 +24,8 @@ function App() {
         {/* Pages with navbar layout */}
         <Route path="/groups" element={<Layout><GroupListPage /></Layout>} />
         <Route path="/groups/new" element={<Layout><NewGroupPage /></Layout>} />
-        <Route path="/groups/:groupId" element={<Layout><GroupDetailPage /></Layout>} />        <Route path="/groups/:groupId/new-post" element={<Layout><NewPostPage /></Layout>} />
-        <Route path="/search" element={<Layout><SearchResults /></Layout>} />
+        <Route path="/groups/:groupId" element={<Layout><GroupDetailPage /></Layout>} />
+        <Route path="/groups/:groupId/new-post" element={<Layout><NewPostPage /></Layout>} />
         <Route path="/post/:postId" element={<Layout><PostDetail /></Layout>} />
         <Route path="/post/:postId/comments" element={<Layout><div>Post Comments</div></Layout>} />
         <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />

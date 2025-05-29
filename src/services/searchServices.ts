@@ -1,4 +1,6 @@
 
+import { getSessionData } from './authServices';
+
 export interface SearchResult {
   id: number;
   type: 'post' | 'group';
@@ -32,7 +34,7 @@ export const searchContent = async (
   type: 'all' | 'posts' | 'groups' = 'all',
   limit: number = 20
 ): Promise<SearchResponse> => {
-  const token = localStorage.getItem('token');
+  const token = getSessionData();
   if (!token) {
     throw new Error('Authentication required');
   }
@@ -64,7 +66,7 @@ export const getSearchSuggestions = async (
   query: string,
   limit: number = 5
 ): Promise<SearchSuggestion[]> => {
-  const token = localStorage.getItem('token');
+  const token = getSessionData();
   if (!token) {
     throw new Error('Authentication required');
   }

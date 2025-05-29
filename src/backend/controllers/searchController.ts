@@ -6,15 +6,8 @@ import { getImageUrl } from '../utils/fileUpload';
 // Search for posts and groups
 export const searchContent = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { q, type = 'all', limit = 20 } = req.query;
+    const { q } = req.query;
     const userId = req.body.user_id; // From authenticateJWT middleware
-
-    console.log('Search request - Query:', q, 'UserId:', userId, 'Body:', req.body);
-
-    if (!userId) {
-      res.status(401).json({ error: 'User authentication required' });
-      return;
-    }
 
     if (!q || typeof q !== 'string') {
       res.status(400).json({ error: 'Search query is required' });
@@ -72,14 +65,16 @@ export const searchContent = async (req: Request, res: Response): Promise<void> 
       const createdGroups = await db.Group.findAll({
         where: { created_by: userId },
         attributes: ['group_id']
-      });      // Combine all accessible group IDs
+      });
+
+      // Combine all accessible group IDs
       const accessibleGroupIds = [
         ...userGroups.map((membership: any) => membership.group_id),
         ...createdGroups.map((group: any) => group.group_id)
       ];
 
       // Remove duplicates
-      const uniqueGroupIds = Array.from(new Set(accessibleGroupIds));
+      const uniqueGroupIds = [...new Set(accessibleGroupIds)];
 
       if (uniqueGroupIds.length > 0) {
         const posts = await db.Post.findAll({
@@ -122,8 +117,9 @@ export const searchContent = async (req: Request, res: Response): Promise<void> 
             }
           };
         });
-      }
-    }    // Transform groups to match SearchResult interface
+      }    }
+
+    // Transform groups to match SearchResult interface
     const transformedGroups = processedGroups.map((group: any) => ({
       id: group.group_id,
       type: 'group' as const,
@@ -162,15 +158,7 @@ export const searchContent = async (req: Request, res: Response): Promise<void> 
 // Get search suggestions based on partial query
 export const getSearchSuggestions = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { q, limit = 5 } = req.query;
-    const userId = req.body.user_id; // From authenticateJWT middleware
-
-    console.log('Search suggestions request - Query:', q, 'UserId:', userId, 'Body:', req.body);
-
-    if (!userId) {
-      res.status(401).json({ error: 'User authentication required' });
-      return;
-    }
+    const { q } = req.query;
 
     if (!q || typeof q !== 'string') {
       res.status(400).json({ error: 'Query parameter is required' });
@@ -178,26 +166,30 @@ export const getSearchSuggestions = async (req: Request, res: Response): Promise
     }
 
     const searchTerm = q.trim();
-    if (searchTerm.length < 2) {
-      res.json([]); // Return empty array for short queries
+    if (searchTerm.length < 1) {
+      res.status(400).json({ error: 'Query must not be empty' });
       return;
-    }    // Get group name suggestions
+    }
+
+    // Get group name suggestions
     const groupSuggestions = await db.Group.findAll({
       where: {
         name: { [Op.iLike]: `%${searchTerm}%` }
       },
       attributes: ['group_id', 'name'],
-      limit: parseInt(limit.toString()) || 5,
+      limit: 5,
       order: [['name', 'ASC']]
     });
 
     const suggestions = groupSuggestions.map((group: any) => ({
       type: 'group',
       id: group.group_id,
-      title: group.name
+      text: group.name
     }));
 
-    res.json(suggestions);
+    res.json({
+      suggestions
+    });
 
   } catch (err) {
     console.error('Error getting search suggestions:', err);

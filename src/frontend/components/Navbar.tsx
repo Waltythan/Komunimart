@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Navbar.css';
-import { clearSessionData } from '../../services/authServices';
+import { clearSessionData, getSessionData } from '../../services/authServices';
 import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate, storeCurrentUsername } from '../../services/userServices';
-import { getSearchSuggestions, SearchSuggestion } from '../../services/searchServices';
+import { searchContent, SearchResult, SearchResponse } from '../../services/searchServices';
 import { normalizeImageUrl } from '../utils/imageHelper';
 
 interface NavbarProps {
@@ -14,11 +14,16 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
   const navigate = useNavigate();
-  const [showDropdown, setShowDropdown] = useState(false);  const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResponse | null>(null);
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -32,7 +37,7 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
             storeCurrentUsername(userProfile.uname);
             setUsername(userProfile.uname);
           }
-          
+
           // Handle profile picture if available
           if (userProfile.profile_pic) {
             // Use the normalizeImageUrl utility for consistent URL handling
@@ -47,66 +52,151 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
         setUsername(currentUsername);
       }
     };
-    
+
     fetchUserData();
-    
+
     // Listen for profile updates
     const unsubscribe = onProfileUpdate(() => {
       fetchUserData();
     });
-    
-    // Cleanup listener on unmount
-    return unsubscribe;
-  }, []);
-    const handleLogout = () => {
+
+    // Cleanup listener and search timeout on unmount
+    return () => {
+      unsubscribe();
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
+  const handleLogout = () => {
     clearSessionData();
     window.location.href = '/';
   };
 
   // Handle search functionality
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setShowSuggestions(false);
-    }
-  };
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
 
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
     if (value.trim().length >= 2) {
-      try {
-        const searchSuggestions = await getSearchSuggestions(value.trim(), 5);
-        setSuggestions(searchSuggestions);
-        setShowSuggestions(true);
-      } catch (error) {
-        console.error('Error fetching search suggestions:', error);
-        // Don't show suggestions if there's an error (like authentication issues)
-        setSuggestions([]);
-        setShowSuggestions(false);
-      }
+      setShowSearchOverlay(true);
+
+      // Set new timeout for debounced search
+      const timeout = setTimeout(async () => {
+        setIsSearching(true);
+        try {
+          const results = await searchContent(value.trim(), 'all', 10);
+          setSearchResults(results);
+        } catch (error) {
+          console.error('Error fetching search results:', error);
+
+          // Handle authentication errors
+          if (error instanceof Error && error.message.includes('Authentication')) {
+            console.warn('User not authenticated, search disabled');
+            setSearchResults({ posts: [], groups: [], total: 0 });
+          } else {
+            setSearchResults(null);
+          }
+        } finally {
+          setIsSearching(false);
+        }
+      }, 300); // 300ms debounce
+      setSearchTimeout(timeout);
     } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
+      setSearchResults(null);
+      setShowSearchOverlay(false);
     }
   };
-
-  const handleSuggestionClick = (suggestion: SearchSuggestion) => {
-    setSearchQuery(suggestion.title);
-    setShowSuggestions(false);
-    navigate(`/search?q=${encodeURIComponent(suggestion.title)}`);
-  };
-
-  const handleSearchFocus = () => {
-    if (searchQuery.trim().length >= 2 && suggestions.length > 0) {
-      setShowSuggestions(true);
+  const handleResultClick = (result: SearchResult) => {
+    setShowSearchOverlay(false);
+    setSearchQuery('');
+    setSelectedResultIndex(-1);
+    if (result.type === 'group') {
+      navigate(`/groups/${result.id}`);
+    } else {
+      navigate(`/post/${result.id}`);
+    }
+  }; const handleSearchFocus = () => {
+    if (searchQuery.trim().length >= 2 && searchResults) {
+      setShowSearchOverlay(true);
     }
   };
 
   const handleSearchBlur = () => {
-    // Delay hiding suggestions to allow clicking on them
-    setTimeout(() => setShowSuggestions(false), 200);
+    // Delay hiding overlay to allow clicking on results
+    setTimeout(() => {
+      setShowSearchOverlay(false);
+      setSelectedResultIndex(-1);
+    }, 200);
+  };
+
+  // Add keyboard navigation handler
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSearchOverlay || !searchResults) return;
+
+    const allResults = [
+      ...searchResults.groups.slice(0, 5),
+      ...searchResults.posts.slice(0, 5)
+    ];
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedResultIndex(prev =>
+          prev < allResults.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedResultIndex(prev =>
+          prev > 0 ? prev - 1 : allResults.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedResultIndex >= 0 && allResults[selectedResultIndex]) {
+          handleResultClick(allResults[selectedResultIndex]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        clearSearch();
+        break;
+    }
+  };
+
+  // Reset selected index when search results change
+  React.useEffect(() => {
+    setSelectedResultIndex(-1);
+  }, [searchResults]);
+
+  // Scroll selected item into view
+  React.useEffect(() => {
+    if (selectedResultIndex >= 0) {
+      const selectedElement = document.querySelector('.search-result-item.selected');
+      if (selectedElement) {
+        selectedElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest'
+        });
+      }
+    }
+  }, [selectedResultIndex]);
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults(null);
+    setShowSearchOverlay(false);
+    setSelectedResultIndex(-1);
+  };
+  const handleSearchClick = () => {
+    // Optional: Add any click-specific logic here
   };
 
   // Get first letter of username for profile pic
@@ -116,75 +206,118 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
     }
     return '?';
   };
-  
+
   return (
     <header className="main-header">
       <div className="header-left">
         <h1 className="app-title" onClick={() => navigate('/groups')}>
           {title}
         </h1>        <div className="search-container">
-          <form onSubmit={handleSearchSubmit} className="search-form">
-            <input 
-              type="text" 
-              className="search-input"
-              placeholder="Search Komunimart"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              onFocus={handleSearchFocus}
-              onBlur={handleSearchBlur}
-            />
-            <button type="submit" className="search-button" aria-label="Search">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-              </svg>
+          <div className="search-input-wrapper">            <input
+            type="text"
+            className="search-input"
+            placeholder="Search Komunimart"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onFocus={handleSearchFocus}
+            onBlur={handleSearchBlur}
+            onClick={handleSearchClick}
+            onKeyDown={handleKeyDown}
+          />            {searchQuery && (
+            <button
+              className="search-clear-button"
+              onClick={clearSearch}
+              aria-label="Clear search"
+            >
+              Clear
             </button>
-          </form>
-          
-          {/* Search Suggestions Dropdown */}
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="search-suggestions">
-              {suggestions.map((suggestion) => (
-                <div
-                  key={`${suggestion.type}-${suggestion.id}`}
-                  className="suggestion-item"
-                  onClick={() => handleSuggestionClick(suggestion)}
-                >
-                  <div className="suggestion-icon">
-                    {suggestion.type === 'group' ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7Zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5.784 6A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216ZM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
-                        <path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/>
-                      </svg>
-                    )}
+          )}
+          </div>
+
+          {/* Search Results Overlay */}
+          {showSearchOverlay && (
+            <div className="search-overlay">
+              <div className="search-overlay-content">
+                {isSearching ? (
+                  <div className="search-loading">
+                    <div className="loading-spinner"></div>
+                    <span>Searching...</span>
                   </div>
-                  <div className="suggestion-content">
-                    <span className="suggestion-title">{suggestion.title}</span>
-                    {suggestion.groupName && (
-                      <span className="suggestion-group">in {suggestion.groupName}</span>
+                ) : searchResults && (searchResults.posts.length > 0 || searchResults.groups.length > 0) ? (
+                  <>                    {/* Groups Section */}
+                    {searchResults.groups.length > 0 && (
+                      <div className="search-section">
+                        <h3 className="search-section-title">Groups</h3>                        {searchResults.groups.slice(0, 3).map((group, index) => (
+                          <div
+                            key={`group-${group.id}`}
+                            className={`search-result-item ${selectedResultIndex === index ? 'selected' : ''}`}
+                            onClick={() => handleResultClick(group)}
+                          >
+                            <div className="result-content">
+                              <div className="result-title">{group.title}</div>
+                              {group.description && (
+                                <div className="result-description">{group.description}</div>
+                              )}
+                              <div className="result-meta">
+                                {group.memberCount || 0} members
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}                    {/* Posts Section */}
+                    {searchResults.posts.length > 0 && (
+                      <div className="search-section">
+                        <h3 className="search-section-title">Posts</h3>                        {searchResults.posts.slice(0, 5).map((post, index) => {
+                          const postIndex = searchResults.groups.slice(0, 3).length + index;
+                          return (
+                            <div
+                              key={`post-${post.id}`}
+                              className={`search-result-item ${selectedResultIndex === postIndex ? 'selected' : ''}`}
+                              onClick={() => handleResultClick(post)}
+                            >
+                              <div className="result-content">
+                                <div className="result-title">{post.title}</div>
+                                {post.content && (
+                                  <div className="result-description">
+                                    {post.content.length > 100
+                                      ? `${post.content.substring(0, 100)}...`
+                                      : post.content
+                                    }
+                                  </div>
+                                )}
+                                <div className="result-meta">
+                                  in {post.groupName}
+                                  {post.author && ` • by ${post.author}`}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
+                  </>
+                ) : searchQuery.trim().length >= 2 ? (
+                  <div className="search-no-results">
+                    <span>No results found for "{searchQuery}"</span>
                   </div>
-                  <span className="suggestion-type">{suggestion.type}</span>
-                </div>
-              ))}
+                ) : null}
+              </div>
             </div>
           )}
         </div>
       </div>
-      
+
       <div className="header-right">
         <div className="nav-actions">
           <div className="profile-menu">
-            <div className="username-display">{username || 'User'}</div>            <button 
+            <div className="username-display">{username || 'User'}</div>            <button
               className="profile-button"
               onClick={() => setShowDropdown(!showDropdown)}
             >
               {profilePicture ? (
-                <img 
-                  src={profilePicture} 
+                <img
+                  src={profilePicture}
                   alt={`${username}'s profile`}
                   className="profile-picture-nav"
                 />
@@ -199,7 +332,7 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
                 <Link to="/profile" className="dropdown-item">
                   <div className="dropdown-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                      <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z" />
                     </svg>
                   </div>
                   <span>My Profile</span>
@@ -208,8 +341,8 @@ const Navbar: React.FC<NavbarProps> = ({ title = 'Komunimart', subtitle }) => {
                 <button onClick={handleLogout} className="dropdown-item">
                   <div className="dropdown-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                      <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                      <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                      <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z" />
+                      <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z" />
                     </svg>
                   </div>
                   <span>Logout</span>
