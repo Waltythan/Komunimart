@@ -12,25 +12,34 @@ import ProfilePage from './frontend/pages/ProfilePage';
 import HomePage from './frontend/pages/HomePage';
 
 import Layout from './frontend/components/Layout';
+import ProtectedRoute from './frontend/components/ProtectedRoute';
+import AuthRoute from './frontend/components/AuthRoute';
+import RootRedirect from './frontend/components/RootRedirect';
 import './App.css';
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Auth pages - no layout */}
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-          {/* Pages with navbar layout */}
-        <Route path="/home" element={<Layout><HomePage /></Layout>} />
-        <Route path="/groups" element={<Layout><GroupListPage /></Layout>} />
-        <Route path="/groups/new" element={<Layout><NewGroupPage /></Layout>} />
-        <Route path="/groups/:groupId" element={<Layout><GroupDetailPage /></Layout>} />
-        <Route path="/groups/:groupId/new-post" element={<Layout><NewPostPage /></Layout>} />
-        <Route path="/post/:postId" element={<Layout><PostDetail /></Layout>} />
-        <Route path="/post/:postId/comments" element={<Layout><div>Post Comments</div></Layout>} />
-        <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
-        <Route path="*" element={<Layout><div>404 Not Found</div></Layout>} />
+        {/* Root route - automatically redirects based on session */}
+        <Route path="/" element={<RootRedirect />} />
+        
+        {/* Auth pages - redirect to home if already logged in */}
+        <Route path="/login" element={<AuthRoute><LoginPage /></AuthRoute>} />
+        <Route path="/register" element={<AuthRoute><RegisterPage /></AuthRoute>} />
+        
+        {/* Protected pages - require authentication */}
+        <Route path="/home" element={<ProtectedRoute><Layout><HomePage /></Layout></ProtectedRoute>} />
+        <Route path="/groups" element={<ProtectedRoute><Layout><GroupListPage /></Layout></ProtectedRoute>} />
+        <Route path="/groups/new" element={<ProtectedRoute><Layout><NewGroupPage /></Layout></ProtectedRoute>} />
+        <Route path="/groups/:groupId" element={<ProtectedRoute><Layout><GroupDetailPage /></Layout></ProtectedRoute>} />
+        <Route path="/groups/:groupId/new-post" element={<ProtectedRoute><Layout><NewPostPage /></Layout></ProtectedRoute>} />
+        <Route path="/post/:postId" element={<ProtectedRoute><Layout><PostDetail /></Layout></ProtectedRoute>} />
+        <Route path="/post/:postId/comments" element={<ProtectedRoute><Layout><div>Post Comments</div></Layout></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Layout><ProfilePage /></Layout></ProtectedRoute>} />
+        
+        {/* 404 route */}
+        <Route path="*" element={<ProtectedRoute><Layout><div>404 Not Found</div></Layout></ProtectedRoute>} />
       </Routes>
     </Router>
   );

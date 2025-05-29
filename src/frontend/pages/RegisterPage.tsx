@@ -54,9 +54,8 @@ export default function RegisterPage() {
         const errData = await res.json();
         throw new Error(errData.message || 'Registration failed');
       }
-      
-      alert('Registration successful!');
-      navigate('/');
+        alert('Registration successful!');
+      navigate('/login');
     } catch (err: any) {
       alert('Registration failed: ' + err.message);
     }

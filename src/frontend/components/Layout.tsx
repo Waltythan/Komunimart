@@ -18,9 +18,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const params = useParams<{ groupId?: string, postId?: string }>();  const [subtitle, setSubtitle] = useState<string | undefined>();
   const [groups, setGroups] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  
-  // Don't show navbar on authentication pages
-  const isAuthPage = path === '/' || path === '/register';
+    // Don't show navbar on authentication pages
+  const isAuthPage = path === '/login' || path === '/register';
   
   useEffect(() => {
     // Check for session (token) at the start
@@ -30,7 +29,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       setCurrentUser(null);
       setGroups([]);
       clearSessionData();
-      navigate('/', { replace: true });
+      navigate('/login', { replace: true });
       return;
     }
     const fetchPageData = async () => {
