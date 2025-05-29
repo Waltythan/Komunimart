@@ -9,6 +9,7 @@ import NewPostPage from './frontend/pages/NewPostPage';
 import NewGroupPage from './frontend/pages/NewGroupPage';
 import PostDetail from './frontend/pages/PostDetail';
 import ProfilePage from './frontend/pages/ProfilePage';
+import HomePage from './frontend/pages/HomePage';
 
 import Layout from './frontend/components/Layout';
 import './App.css';
@@ -20,8 +21,8 @@ function App() {
         {/* Auth pages - no layout */}
         <Route path="/" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        
-        {/* Pages with navbar layout */}
+          {/* Pages with navbar layout */}
+        <Route path="/home" element={<Layout><HomePage /></Layout>} />
         <Route path="/groups" element={<Layout><GroupListPage /></Layout>} />
         <Route path="/groups/new" element={<Layout><NewGroupPage /></Layout>} />
         <Route path="/groups/:groupId" element={<Layout><GroupDetailPage /></Layout>} />

@@ -68,11 +68,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       else if (path.includes('new-post')) {
         setSubtitle('Buat Postingan Baru');
       } else if (path.includes('/groups/new')) {
-        setSubtitle('Buat Grup Baru');
-      } else if (path === '/profile') {
+        setSubtitle('Buat Grup Baru');      } else if (path === '/profile') {
         setSubtitle('Profil Saya');
       } else if (path === '/groups') {
         setSubtitle('Daftar Grup');
+      } else if (path === '/home') {
+        setSubtitle('Beranda');
       }
     };
     
@@ -133,7 +134,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="sidebar-header">
               <h3>Your Shortcuts</h3>
             </div>
-            <div className="sidebar-menu">              <Link to="/profile" className="sidebar-item">
+            <div className="sidebar-menu">
+              <Link to="/home" className="sidebar-item">
+                <div className="sidebar-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="m8 3.293 6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293l6-6zm5-.793V6l-2-2V2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5z"/>
+                    <path d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646a.5.5 0 0 1-.708.708L8 2.207 1.354 8.854a.5.5 0 1 1-.708-.708L7.293 1.5z"/>
+                  </svg>
+                </div>
+                <span>Home</span>
+              </Link>
+              <Link to="/profile" className="sidebar-item">
                 {currentUser?.profile_pic ? (
                   <div className="sidebar-profile-pic">
                     <img 
