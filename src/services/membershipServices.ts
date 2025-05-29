@@ -1,26 +1,46 @@
-import { getSessionData } from './authServices';
+import apiFetch from './apiClient';
 import { getCurrentUserId } from './userServices';
 
-// Function to join a group
+/**
+ * Interface for group member data
+ */
+export interface GroupMember {
+  id: string;
+  username: string;
+  email?: string;
+  profile_image?: string;
+  role: 'member' | 'admin';
+  joined_at: string;
+}
+
+/**
+ * Interface for group data
+ */
+export interface Group {
+  id: string;
+  name: string;
+  description: string;
+  created_by: string;
+  image_url?: string;
+  created_at: string;
+  member_count?: number;
+}
+
+/**
+ * Function to join a group
+ * @param groupId - ID of the group to join
+ * @param userId - ID of the user joining the group
+ * @returns Promise resolving to boolean indicating success
+ */
 export const joinGroup = async (groupId: string, userId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
-    const response = await fetch('http://localhost:3000/api/memberships/join', {
+    await apiFetch('/memberships/join', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
       body: JSON.stringify({
         user_id: userId,
         group_id: groupId
       })
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to join group');
-    }
 
     return true;
   } catch (error) {
@@ -29,26 +49,21 @@ export const joinGroup = async (groupId: string, userId: string): Promise<boolea
   }
 };
 
-// Function to leave a group
+/**
+ * Function to leave a group
+ * @param groupId - ID of the group to leave
+ * @param userId - ID of the user leaving the group
+ * @returns Promise resolving to boolean indicating success
+ */
 export const leaveGroup = async (groupId: string, userId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
-    const response = await fetch('http://localhost:3000/api/memberships/leave', {
+    await apiFetch('/memberships/leave', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
       body: JSON.stringify({
         user_id: userId,
         group_id: groupId
       })
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to leave group');
-    }
 
     return true;
   } catch (error) {
@@ -57,21 +72,15 @@ export const leaveGroup = async (groupId: string, userId: string): Promise<boole
   }
 };
 
-// Function to check if a user is a member of a group
+/**
+ * Function to check if a user is a member of a group
+ * @param groupId - ID of the group
+ * @param userId - ID of the user
+ * @returns Promise resolving to boolean indicating if user is a member
+ */
 export const checkGroupMembership = async (groupId: string, userId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/api/memberships/check/${groupId}/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      return false;
-    }
-
-    const data = await response.json();
+    const data = await apiFetch<{isMember: boolean, role?: string}>(`/memberships/check/${groupId}/${userId}`);
     return data.isMember;
   } catch (error) {
     console.error('Error checking group membership:', error);
@@ -79,67 +88,43 @@ export const checkGroupMembership = async (groupId: string, userId: string): Pro
   }
 };
 
-// Function to get all members of a group
-export const getGroupMembers = async (groupId: string): Promise<any[]> => {
+/**
+ * Function to get all members of a group
+ * @param groupId - ID of the group
+ * @returns Promise resolving to array of group members
+ */
+export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> => {
   try {
-    const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/api/memberships/group/${groupId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to get group members');
-    }
-
-    const members = await response.json();
-    return members;
+    return await apiFetch<GroupMember[]>(`/memberships/group/${groupId}`);
   } catch (error) {
     console.error('Error getting group members:', error);
     return [];
   }
 };
 
-// Function to get all groups a user is a member of
-export const getUserGroups = async (userId: string): Promise<any[]> => {
+/**
+ * Function to get all groups a user is a member of
+ * @param userId - ID of the user
+ * @returns Promise resolving to array of groups
+ */
+export const getUserGroups = async (userId: string): Promise<Group[]> => {
   try {
-    const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/api/memberships/user/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to get user groups');
-    }
-
-    const groups = await response.json();
-    return groups;
+    return await apiFetch<Group[]>(`/memberships/user/${userId}`);
   } catch (error) {
     console.error('Error getting user groups:', error);
     return [];
   }
 };
 
-// Function to check if user is the creator of a group
+/**
+ * Function to check if user is the creator of a group
+ * @param groupId - ID of the group
+ * @param userId - ID of the user
+ * @returns Promise resolving to boolean indicating if user is the creator
+ */
 export const isGroupCreator = async (groupId: string, userId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/api/groups/${groupId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      return false;
-    }
-
-    const groupData = await response.json();
+    const groupData = await apiFetch<Group>(`/groups/${groupId}`);
     return groupData.created_by === userId;
   } catch (error) {
     console.error('Error checking if user is group creator:', error);
@@ -147,34 +132,31 @@ export const isGroupCreator = async (groupId: string, userId: string): Promise<b
   }
 };
 
-// Function to check if user is an admin of a group (creator or promoted admin)
+/**
+ * Function to check if user is an admin of a group (creator or promoted admin)
+ * @param groupId - ID of the group
+ * @param userId - ID of the user
+ * @returns Promise resolving to boolean indicating if user is an admin
+ */
 export const isGroupAdmin = async (groupId: string, userId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
-    
     // First check if user is creator
-    const creatorResponse = await fetch(`http://localhost:3000/api/groups/${groupId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (creatorResponse.ok) {
-      const groupData = await creatorResponse.json();
+    try {
+      const groupData = await apiFetch<Group>(`/groups/${groupId}`);
       if (groupData.created_by === userId) {
         return true;
       }
-    }    // Then check if user has admin role in membership
-    const membershipResponse = await fetch(`http://localhost:3000/api/memberships/check/${groupId}/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!membershipResponse.ok) {
+    } catch {
+      // Continue to check membership if not creator
+    }
+    
+    // Then check if user has admin role in membership
+    try {
+      const membershipData = await apiFetch<{isMember: boolean, role?: string}>(`/memberships/check/${groupId}/${userId}`);
+      return membershipData.isMember && membershipData.role === 'admin';
+    } catch {
       return false;
-    }    const membershipData = await membershipResponse.json();
-    return membershipData.isMember && membershipData.role === 'admin';
+    }
   } catch (error) {
     console.error('Error checking if user is group admin:', error);
     return false;
@@ -193,29 +175,26 @@ export const getGroupMemberCount = async (groupId: string): Promise<number> => {
   }
 };
 
-// Function to remove a member from group
+/**
+ * Function to remove a member from a group
+ * @param groupId - ID of the group
+ * @param userId - ID of the user to remove
+ * @returns Promise resolving to boolean indicating success
+ */
 export const removeMemberFromGroup = async (groupId: string, userId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
     const currentUserId = getCurrentUserId();
     
     if (!currentUserId) {
       throw new Error('Authentication required');
-    }    const response = await fetch(`http://localhost:3000/api/memberships/remove/${groupId}/${userId}`, {
+    }
+    
+    await apiFetch(`/memberships/remove/${groupId}/${userId}`, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
       body: JSON.stringify({
         removed_by: currentUserId
       })
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to remove member');
-    }
 
     return true;
   } catch (error) {

@@ -1,6 +1,9 @@
 
-import { getSessionData } from './authServices';
+import apiFetch from './apiClient';
 
+/**
+ * Interface for search result item
+ */
 export interface SearchResult {
   id: number;
   type: 'post' | 'group';
@@ -15,12 +18,18 @@ export interface SearchResult {
   author?: string;
 }
 
+/**
+ * Interface for search response
+ */
 export interface SearchResponse {
   posts: SearchResult[];
   groups: SearchResult[];
   total: number;
 }
 
+/**
+ * Interface for search suggestion
+ */
 export interface SearchSuggestion {
   id: number;
   type: 'post' | 'group';
@@ -28,66 +37,41 @@ export interface SearchSuggestion {
   groupName?: string;
 }
 
-// Search for posts and groups
+/**
+ * Search for posts and groups
+ * @param query - Search query string
+ * @param type - Type of content to search
+ * @param limit - Maximum number of results to return
+ * @returns Promise resolving to search response
+ */
 export const searchContent = async (
   query: string,
   type: 'all' | 'posts' | 'groups' = 'all',
   limit: number = 20
 ): Promise<SearchResponse> => {
-  const token = getSessionData();
-  if (!token) {
-    throw new Error('Authentication required');
-  }
-
   const params = new URLSearchParams({
     q: query,
     type,
     limit: limit.toString()
   });
 
-  const response = await fetch(`http://localhost:3000/api/search?${params}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Search failed' }));
-    throw new Error(errorData.message || 'Failed to search content');
-  }
-
-  return await response.json();
+  return await apiFetch<SearchResponse>(`/search?${params}`);
 };
 
-// Get search suggestions for autocomplete
+/**
+ * Get search suggestions for autocomplete
+ * @param query - Search query string
+ * @param limit - Maximum number of suggestions to return
+ * @returns Promise resolving to array of search suggestions
+ */
 export const getSearchSuggestions = async (
   query: string,
   limit: number = 5
 ): Promise<SearchSuggestion[]> => {
-  const token = getSessionData();
-  if (!token) {
-    throw new Error('Authentication required');
-  }
-
   const params = new URLSearchParams({
     q: query,
     limit: limit.toString()
   });
 
-  const response = await fetch(`http://localhost:3000/api/search/suggestions?${params}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Failed to get suggestions' }));
-    throw new Error(errorData.message || 'Failed to get search suggestions');
-  }
-
-  return await response.json();
+  return await apiFetch<SearchSuggestion[]>(`/search/suggestions?${params}`);
 };

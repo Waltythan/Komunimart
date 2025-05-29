@@ -1,6 +1,7 @@
 // src/services/userServices.ts
 import { jwtDecode } from "jwt-decode";
 import { getSessionData } from "./authServices";
+import apiFetch from "./apiClient";
 
 // Initialize the stored username when this module is first loaded
 (function initializeStoredUsername() {
@@ -62,20 +63,7 @@ export function getCurrentUsername(): string | null {
 // Function to get user details by ID
 export async function getUserById(userId: string): Promise<any> {
   try {
-    const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/api/users/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch user data');
-    }
-    
-    const user = await response.json();
-    return user;
+    return await apiFetch(`/users/${userId}`);
   } catch (error) {
     console.error('Error fetching user details:', error);
     return null;
@@ -90,6 +78,7 @@ export async function getCurrentUser(): Promise<any> {
       throw new Error('No authentication token found');
     }
 
+    // /me is a root endpoint, not under /api
     const response = await fetch('http://localhost:3000/me', {
       headers: {
         'Authorization': `Bearer ${token}`
@@ -112,25 +101,11 @@ export async function getCurrentUserProfile(): Promise<any> {
   try {
     const token = getSessionData();
     if (!token) {
-      // Log to browser console
       console.error('[getCurrentUserProfile] No authentication token found');
-      // Also log to VSCode terminal by sending to a local debug endpoint (if backend supports it)
-      try {
-        await fetch('http://localhost:3000/debug/log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: '[getCurrentUserProfile] No authentication token found',
-            source: 'frontend',
-            time: new Date().toISOString()
-          })
-        });
-      } catch (e) {
-        // Ignore if debug endpoint is not available
-      }
       throw new Error('No authentication token found');
     }
 
+    // /me is a root endpoint, not under /api
     const response = await fetch('http://localhost:3000/me', {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -157,6 +132,7 @@ export async function updateUserProfile(profileData: { uname?: string; email?: s
       throw new Error('No authentication token found');
     }
 
+    // /profile/update is a root endpoint, not under /api
     const response = await fetch('http://localhost:3000/profile/update', {
       method: 'PUT',
       headers: {
@@ -199,6 +175,7 @@ export async function uploadProfilePicture(imageFile: File): Promise<any> {
     const formData = new FormData();
     formData.append('image', imageFile);
 
+    // /profile/image is a root endpoint, not under /api
     const response = await fetch('http://localhost:3000/profile/image', {
       method: 'POST',
       headers: {
@@ -222,22 +199,9 @@ export async function uploadProfilePicture(imageFile: File): Promise<any> {
 // Function to delete user
 export async function deleteUser(userId: string): Promise<any> {
   try {
-    const token = getSessionData();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-    const response = await fetch(`http://localhost:3000/api/users/${userId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+    return await apiFetch(`/users/${userId}`, { 
+      method: 'DELETE'
     });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to delete user');
-    }
-    return await response.json();
   } catch (error) {
     console.error('Error deleting user:', error);
     throw error;

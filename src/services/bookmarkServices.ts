@@ -1,32 +1,20 @@
-import { getSessionData } from './authServices';
+// src/services/bookmarkServices.ts
+import apiFetch from './apiClient';
 import { getCurrentUserId } from './userServices';
 
 // Add a bookmark for a post
 export const addBookmark = async (postId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
     const userId = getCurrentUserId();
-      if (!userId) {
-      throw new Error('User not authenticated');
-    }
+    if (!userId) throw new Error('User not authenticated');
     
-    const response = await fetch('http://localhost:3000/api/bookmarks', {
+    await apiFetch('/bookmarks', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+      body: JSON.stringify({ 
         user_id: userId,
         post_id: postId
       })
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to add bookmark');
-    }
-
     return true;
   } catch (error) {
     console.error('Error adding bookmark:', error);
@@ -37,29 +25,16 @@ export const addBookmark = async (postId: string): Promise<boolean> => {
 // Remove a bookmark for a post
 export const removeBookmark = async (postId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
     const userId = getCurrentUserId();
-      if (!userId) {
-      throw new Error('User not authenticated');
-    }
+    if (!userId) throw new Error('User not authenticated');
     
-    const response = await fetch('http://localhost:3000/api/bookmarks', {
+    await apiFetch('/bookmarks', {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({
         user_id: userId,
         post_id: postId
       })
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to remove bookmark');
-    }
-
     return true;
   } catch (error) {
     console.error('Error removing bookmark:', error);
@@ -70,26 +45,10 @@ export const removeBookmark = async (postId: string): Promise<boolean> => {
 // Get user's bookmarks
 export const getUserBookmarks = async (userId?: string): Promise<any[]> => {
   try {
-    const token = getSessionData();
     const targetUserId = userId || getCurrentUserId();
-      if (!targetUserId) {
-      throw new Error('User ID required');
-    }
+    if (!targetUserId) throw new Error('User ID required');
     
-    const response = await fetch(`http://localhost:3000/api/bookmarks/user/${targetUserId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to fetch bookmarks');
-    }
-
-    return await response.json();
+    return await apiFetch(`/bookmarks/user/${targetUserId}`);
   } catch (error) {
     console.error('Error fetching bookmarks:', error);
     return [];
@@ -99,25 +58,10 @@ export const getUserBookmarks = async (userId?: string): Promise<any[]> => {
 // Check if a post is bookmarked by the current user
 export const checkBookmarkStatus = async (postId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
     const userId = getCurrentUserId();
-      if (!userId) {
-      return false;
-    }
+    if (!userId) return false;
     
-    const response = await fetch(`http://localhost:3000/api/bookmarks/status?user_id=${userId}&post_id=${postId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      return false;
-    }
-
-    const data = await response.json();
+    const data = await apiFetch(`/bookmarks/status?user_id=${userId}&post_id=${postId}`);
     return data.isBookmarked;
   } catch (error) {
     console.error('Error checking bookmark status:', error);

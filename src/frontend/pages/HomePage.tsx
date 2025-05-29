@@ -1,11 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getCurrentUserId } from '../../services/userServices';
-import { getUserGroups } from '../../services/membershipServices';
-import { addBookmark, removeBookmark, checkBookmarkStatus } from '../../services/bookmarkServices';
-import { getSessionData } from '../../services/authServices';
+import { 
+  // Import all services from the central export
+  getCurrentUserId,
+  getUserGroups,
+  addBookmark, 
+  removeBookmark, 
+  checkBookmarkStatus,
+  getGroupPosts,
+  addPostLike, 
+  removePostLike, 
+  getPostLikeCount,
+  Post as ServicePost
+} from '../../services';
 import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
 import '../styles/HomePage.css';
+
+// Helper function to adapt service post type to component post type
+const adaptPostFormat = (post: ServicePost, groupInfo: {group_id: string, name: string}): Post => {
+  return {
+    post_id: post.id,
+    title: post.title,
+    content: post.content,
+    author_id: post.created_by,
+    created_at: post.created_at,
+    image_url: post.image_url,
+    group_id: post.group_id || groupInfo.group_id,
+    author: {
+      user_id: post.author?.id || post.created_by,
+      uname: post.author?.username || 'Unknown',
+      profile_pic: post.author?.profile_image
+    },
+    group: groupInfo
+  };
+};
 
 interface Post {
   post_id: string;
@@ -29,6 +57,7 @@ interface Post {
 }
 
 interface Group {
+  // Original field names used in the frontend components
   group_id: string;
   name: string;
   description?: string;
@@ -48,52 +77,49 @@ const HomePage: React.FC = () => {
   const [postLiked, setPostLiked] = useState<{ [key: string]: boolean }>({});
 
   const userId = getCurrentUserId();
-
   useEffect(() => {
-    const token = getSessionData();
-    if (!token || !userId) {
+    if (!userId) {
       navigate('/', { replace: true });
       return;
     }
 
     const fetchHomePageData = async () => {
       setLoading(true);
-      try {
-        // Fetch user's joined groups
-        const userGroups = await getUserGroups(userId);
-        setGroups(userGroups);
+      try {        // Fetch user's joined groups
+        const userGroupsFromAPI = await getUserGroups(userId);
+        
+        // Map the service Group interface to the frontend Group interface
+        const adaptedGroups = userGroupsFromAPI.map(group => ({
+          group_id: group.id,
+          name: group.name,
+          description: group.description,
+          image_url: group.image_url,
+          created_at: group.created_at,
+          created_by: group.created_by
+        }));
+        
+        setGroups(adaptedGroups);
 
-        if (userGroups.length === 0) {
+        if (adaptedGroups.length === 0) {
           setPosts([]);
           setLoading(false);
           return;
-        }
-
-        // Fetch posts from all joined groups
+        }        // Fetch posts from all joined groups
         const allPosts: Post[] = [];
-        const token = getSessionData();
 
         await Promise.all(
-          userGroups.map(async (group) => {
-            try {
-              const postsRes = await fetch(`http://localhost:3000/api/protected-posts/group/${group.group_id}`, {
-                headers: {
-                  'Authorization': `Bearer ${token}`
-                }
-              });
-
-              if (postsRes.ok) {
-                const groupPosts = await postsRes.json();
-                // Add group information to each post
-                const postsWithGroup = groupPosts.map((post: any) => ({
-                  ...post,
-                  group: {
-                    group_id: group.group_id,
-                    name: group.name
-                  }
-                }));
-                allPosts.push(...postsWithGroup);
-              }
+          adaptedGroups.map(async (group) => {
+            try {              // Use the groupServices function to fetch posts
+              const groupPosts = await getGroupPosts(group.group_id);
+              
+              // Convert service posts to component-compatible format
+              const postsWithGroup = groupPosts.map((post) => 
+                adaptPostFormat(post, {
+                  group_id: group.group_id,
+                  name: group.name
+                })
+              );
+              allPosts.push(...postsWithGroup);
             } catch (error) {
               console.error(`Error fetching posts for group ${group.name}:`, error);
             }
@@ -105,21 +131,13 @@ const HomePage: React.FC = () => {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
 
-        setPosts(sortedPosts);
-
-        // Fetch like status and counts for all posts
+        setPosts(sortedPosts);        // Fetch like status and counts for all posts
         await Promise.all(
           sortedPosts.map(async (post) => {
             try {
-              let url = `http://localhost:3000/api/posts/likes/count?likeable_id=${post.post_id}&likeable_type=Post`;
-              if (userId) url += `&user_id=${userId}`;
-
-              const res = await fetch(url);
-              if (res.ok) {
-                const data = await res.json();
-                setPostLikes(prev => ({ ...prev, [post.post_id]: data.count || 0 }));
-                setPostLiked(prev => ({ ...prev, [post.post_id]: data.likedByUser || false }));
-              }
+              const likeData = await getPostLikeCount(post.post_id, userId || undefined);
+              setPostLikes(prev => ({ ...prev, [post.post_id]: likeData.count || 0 }));
+              setPostLiked(prev => ({ ...prev, [post.post_id]: likeData.likedByUser || false }));
             } catch (error) {
               console.error(`Error fetching likes for post ${post.post_id}:`, error);
             }
@@ -182,7 +200,6 @@ const HomePage: React.FC = () => {
       minute: '2-digit'
     });
   };
-
   const handleLikePost = async (postId: string) => {
     if (!userId) return;
 
@@ -195,34 +212,17 @@ const HomePage: React.FC = () => {
         [postId]: isLiked ? Math.max(0, (prev[postId] || 1) - 1) : (prev[postId] || 0) + 1 
       }));
 
-      const res = await fetch(`http://localhost:3000/api/posts/likes`, {
-        method: isLiked ? 'DELETE' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          likeable_id: postId,
-          likeable_type: 'Post',
-        })
-      });
-
-      if (!res.ok) {
-        console.error('Like API error:', await res.text());
-        // Revert optimistic update on failure
-        setPostLiked(prev => ({ ...prev, [postId]: isLiked }));
-        setPostLikes(prev => ({ 
-          ...prev, 
-          [postId]: isLiked ? (prev[postId] || 0) + 1 : Math.max(0, (prev[postId] || 1) - 1)
-        }));
-        return;
+      // Use the post service functions
+      if (isLiked) {
+        await removePostLike(postId, userId);
+      } else {
+        await addPostLike(postId, userId);
       }
 
       // Fetch updated count for accuracy
-      const countRes = await fetch(`http://localhost:3000/api/posts/likes/count?likeable_id=${postId}&likeable_type=Post&user_id=${userId}`);
-      if (countRes.ok) {
-        const data = await countRes.json();
-        setPostLikes(prev => ({ ...prev, [postId]: data.count || 0 }));
-        setPostLiked(prev => ({ ...prev, [postId]: data.likedByUser || false }));
-      }
+      const likeData = await getPostLikeCount(postId, userId);
+      setPostLikes(prev => ({ ...prev, [postId]: likeData.count || 0 }));
+      setPostLiked(prev => ({ ...prev, [postId]: likeData.likedByUser || false }));
     } catch (error) {
       console.error('Error liking post:', error);
       // Revert optimistic update on error

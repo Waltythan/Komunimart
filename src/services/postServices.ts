@@ -1,24 +1,84 @@
-import { getSessionData } from './authServices';
+import apiFetch from './apiClient';
 import { getCurrentUserId } from './userServices';
 
-// Function to delete a post (admin or author only)
+/**
+ * Interface for Post data
+ */
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  created_by: string;
+  group_id?: string;
+  image_url?: string;
+  created_at: string;
+  updated_at: string;
+  author?: {
+    id: string;
+    username: string;
+    profile_image?: string;
+  };
+}
+
+/**
+ * Interface for Comment data
+ */
+export interface Comment {
+  id: string;
+  content: string;
+  post_id: string;
+  created_by: string;
+  image_url?: string;
+  created_at: string;
+  updated_at: string;
+  author?: {
+    id: string;
+    username: string;
+    profile_image?: string;
+  };
+}
+
+// ======== POST OPERATIONS ========
+
+/**
+ * Create a new protected post
+ * @param formData - Form data containing post details
+ * @returns Promise resolving to created post
+ */
+export async function createPost(formData: FormData): Promise<Post> {
+  return apiFetch<Post>('/protected-posts', { method: 'POST', body: formData });
+}
+
+/**
+ * Fetch a single protected post by ID
+ * @param postId - ID of the post
+ * @returns Promise resolving to post data
+ */
+export async function getProtectedPostById(postId: string): Promise<Post> {
+  return apiFetch<Post>(`/protected-posts/${postId}`);
+}
+
+/**
+ * Fetch posts for a group (requires authentication)
+ * Note: This function is also available in groupServices.ts as getGroupPosts
+ * @param groupId - ID of the group
+ * @returns Promise resolving to array of posts
+ */
+export async function getProtectedPostsByGroup(groupId: string): Promise<Post[]> {
+  return apiFetch<Post[]>(`/protected-posts/group/${groupId}`);
+}
+
+/**
+ * Delete a post (admin or author only)
+ * @param postId - ID of the post to delete
+ * @returns Promise resolving to boolean indicating success
+ */
 export const deletePost = async (postId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/api/posts/admin/${postId}`, {
+    await apiFetch(`/posts/admin/${postId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({ deleted_by: getCurrentUserId() })
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to delete post');
-    }
-
     return true;
   } catch (error) {
     console.error('Error deleting post:', error);
@@ -26,24 +86,38 @@ export const deletePost = async (postId: string): Promise<boolean> => {
   }
 };
 
-// Function to delete a comment (admin or author only)
+// ======== COMMENT OPERATIONS ========
+
+/**
+ * Fetch comments for a post
+ * @param postId - ID of the post
+ * @returns Promise resolving to array of comments
+ */
+export async function getCommentsByPost(postId: string): Promise<Comment[]> {
+  return apiFetch<Comment[]>(`/posts/${postId}/comments`);
+}
+
+/**
+ * Create a new comment on a protected post
+ * @param postId - ID of the post
+ * @param formData - Form data containing comment details
+ * @returns Promise resolving to created comment
+ */
+export async function createCommentOnPost(postId: string, formData: FormData): Promise<Comment> {
+  return apiFetch<Comment>(`/protected-posts/${postId}/comments`, { method: 'POST', body: formData });
+}
+
+/**
+ * Delete a comment (admin or author only)
+ * @param commentId - ID of the comment to delete
+ * @returns Promise resolving to boolean indicating success
+ */
 export const deleteComment = async (commentId: string): Promise<boolean> => {
   try {
-    const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/api/posts/comments/${commentId}`, {
+    await apiFetch(`/posts/comments/${commentId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({ deleted_by: getCurrentUserId() })
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to delete comment');
-    }
-
     return true;
   } catch (error) {
     console.error('Error deleting comment:', error);
@@ -51,63 +125,59 @@ export const deleteComment = async (commentId: string): Promise<boolean> => {
   }
 };
 
-// Function to update a group (admin only)
-export const updateGroup = async (groupId: string, formData: FormData): Promise<boolean> => {
-  try {
-    const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/api/groups/${groupId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: formData
-    });
+// ======== LIKE OPERATIONS ========
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to update group');
-    }
+// Like response interface
+export interface LikeCountResponse {
+  count: number;
+  likedByUser: boolean;
+}
 
-    return true;
-  } catch (error) {
-    console.error('Error updating group:', error);
-    return false;
-  }
-};
+// Get like count and whether current user liked the post
+export async function getPostLikeCount(postId: string, userId?: string): Promise<LikeCountResponse> {
+  let path = `/posts/likes/count?likeable_id=${postId}&likeable_type=Post`;
+  if (userId) path += `&user_id=${userId}`;
+  return apiFetch(path);
+}
 
-// Function to delete a group (admin only)
-export const deleteGroup = async (groupId: string): Promise<boolean> => {
-  try {
-    const token = getSessionData();
-    const userId = getCurrentUserId();
-      const response = await fetch(`http://localhost:3000/api/groups/${groupId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ deleted_by: userId })
-    });if (!response.ok) {
-      let errorMessage = 'Failed to delete group';
-        try {
-        const errorData = await response.json();
-        
-        if (errorData.error) {
-          errorMessage = errorData.error;
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        }
-      } catch (jsonError) {
-        // Could not parse JSON response
-        console.error('Could not parse error response:', jsonError);
-      }
-      
-      throw new Error(errorMessage);
-    }
+// Get like count and whether current user liked the comment
+export async function getCommentLikeCount(commentId: string, userId?: string): Promise<LikeCountResponse> {
+  let path = `/posts/likes/count?likeable_id=${commentId}&likeable_type=Comment`;
+  if (userId) path += `&user_id=${userId}`;
+  return apiFetch(path);
+}
 
-    return true;
-  } catch (error) {
-    console.error('Error deleting group:', error);
-    throw error; // Re-throw to handle in the component
-  }
-};
+// Add a like to a post
+export async function addPostLike(postId: string, userId: string): Promise<any> {
+  return apiFetch('/posts/likes', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, likeable_id: postId, likeable_type: 'Post' })
+  });
+}
+
+// Remove a like from a post
+export async function removePostLike(postId: string, userId: string): Promise<any> {
+  return apiFetch('/posts/likes', {
+    method: 'DELETE',
+    body: JSON.stringify({ user_id: userId, likeable_id: postId, likeable_type: 'Post' })
+  });
+}
+
+// Add a like to a comment
+export async function addCommentLike(commentId: string, userId: string): Promise<any> {
+  return apiFetch('/posts/likes', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, likeable_id: commentId, likeable_type: 'Comment' })
+  });
+}
+
+// Remove a like from a comment
+export async function removeCommentLike(commentId: string, userId: string): Promise<any> {
+  return apiFetch('/posts/likes', {
+    method: 'DELETE',
+    body: JSON.stringify({ user_id: userId, likeable_id: commentId, likeable_type: 'Comment' })
+  });
+}
+
+// Group operations have been moved to groupServices.ts
+// Import them from there instead
