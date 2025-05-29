@@ -18,13 +18,13 @@ export default function LoginPage() {
         body: JSON.stringify({ uname, password }),
       });
 
-      const data = await res.json();
-
+      const responseData = await res.json();
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Login failed');      }      storeSessionData(data.token); // Store the token in sessionStorage
-      
-      alert(`Welcome, ${data.user.uname}!`);
+        throw new Error(responseData.message || 'Login failed');
+      }
+      storeSessionData(responseData.token); // Store the token in sessionStorage
+
+      alert(`Welcome, ${responseData.user.uname}!`);
       navigate('/home'); // Redirect to home page after successful login
     } catch (err: any) {
       alert('❌ '+ (err.message || 'Login failed'));

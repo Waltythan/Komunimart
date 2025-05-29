@@ -147,8 +147,12 @@ app.post('/auth/login', async (req: Request, res: Response) => {
 // Get current user endpoint (protected)
 app.get('/me', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const userId = req.body.user_id; // Set by authenticateJWT middleware
-    
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
     const user = await User.findByPk(userId, {
       attributes: ['user_id', 'uname', 'email', 'profile_pic', 'created_at']
     });
@@ -201,7 +205,11 @@ app.get('/users/:userId', async (req: Request, res: Response) => {
 // Update user profile endpoint (protected)
 app.put('/profile/update', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    const userId = req.body.user_id; // Set by authenticateJWT middleware
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
     const { uname, email } = req.body;
     
     if (!uname && !email) {

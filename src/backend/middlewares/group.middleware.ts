@@ -7,8 +7,7 @@ export const checkGroupMembership = async (req: Request, res: Response, next: Ne
     const groupId = req.params.groupId;
     
     // Get the user ID from the authenticated user (set by authenticateJWT middleware)
-    const userId = req.body.user_id;
-    
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ error: 'Authentication required' });
       return;
@@ -61,8 +60,7 @@ export const checkGroupMembership = async (req: Request, res: Response, next: Ne
 export const checkGroupAdminRole = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const groupId = req.params.groupId;
-    const userId = req.body.user_id;
-    
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ error: 'Authentication required' });
       return;

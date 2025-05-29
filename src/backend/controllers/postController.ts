@@ -245,20 +245,21 @@ export const deletePost = async (req: Request, res: Response) => {
     
     // Delete all related data in order (foreign key constraints)
     // 1. Delete all likes for comments on this post
-    await db.Like.destroy({
-      where: {
-        likeable_id: {
-          [db.Sequelize.Op.in]: db.Sequelize.literal(`(SELECT comment_id FROM Comments WHERE post_id = '${postId}')`)
-        },
-        likeable_type: 'Comment'
-      }
+    const commentRecords = await db.Comment.findAll({
+      where: { post_id: postId },
+      attributes: ['comment_id'],
+      raw: true
     });
+    const commentIds = commentRecords.map((c: any) => c.comment_id);
+    if (commentIds.length > 0) {
+      await db.Like.destroy({
+        where: { likeable_id: commentIds, likeable_type: 'Comment' }
+      });
+    }
     
     // 2. Delete all comments
-    await db.Comment.destroy({
-      where: { post_id: postId }
-    });
-    
+    await db.Comment.destroy({ where: { post_id: postId } });
+
     // 3. Delete all likes for this post
     await db.Like.destroy({
       where: { 

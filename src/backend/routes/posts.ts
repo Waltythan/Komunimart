@@ -12,6 +12,7 @@ import {
   deleteComment
 } from '../controllers/postController';
 import { upload, getImageUrl } from '../utils/fileUpload';
+import { authenticateJWT } from '../middlewares/auth.middleware';
 import { deleteFile } from '../utils/fileManager';
 // Tambahkan import db
 const db = require('../../../models');
@@ -88,8 +89,8 @@ router.delete('/:postId', async (req, res) => {
   }
 });
 
-// Delete post with admin/author check
-router.delete('/admin/:postId', deletePost);
+// Delete post with admin/author check (requires authentication)
+router.delete('/admin/:postId', authenticateJWT, deletePost);
 
 // Delete comment with admin/author check
 router.delete('/comments/:commentId', deleteComment);

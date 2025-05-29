@@ -25,14 +25,17 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
 
     if (!token) {
         res.status(403).json({ message: 'No token provided' });
+        return;
     }
     else {
         const decoded = verifyToken(token);
 
         if (!decoded) {
             res.status(401).json({ message: 'Invalid or expired token' });
+            return;
         }
-        else {            const { userId, username } = decoded as JwtPayloadWithUserInfo;
+        else {
+            const { userId, username } = decoded as JwtPayloadWithUserInfo;
 
             // Store user info in req.user instead of req.body
             req.user = {

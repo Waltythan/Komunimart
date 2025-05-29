@@ -8,8 +8,7 @@ export const checkPostAccess = async (req: Request, res: Response, next: NextFun
     const postId = req.params.postId;
     
     // Get the user ID from the authenticated user (set by authenticateJWT middleware)
-    const userId = req.body.user_id;
-    
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ error: 'Authentication required' });
       return;
@@ -80,8 +79,7 @@ export const checkPostEditRights = async (req: Request, res: Response, next: Nex
     const postId = req.params.postId;
     
     // Get the user ID from the authenticated user (set by authenticateJWT middleware)
-    const userId = req.body.user_id;
-    
+    const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ error: 'Authentication required' });
       return;

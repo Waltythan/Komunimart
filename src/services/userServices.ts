@@ -63,7 +63,7 @@ export function getCurrentUsername(): string | null {
 export async function getUserById(userId: string): Promise<any> {
   try {
     const token = getSessionData();
-    const response = await fetch(`http://localhost:3000/users/${userId}`, {
+    const response = await fetch(`http://localhost:3000/api/users/${userId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

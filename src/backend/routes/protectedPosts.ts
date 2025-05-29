@@ -11,8 +11,13 @@ const router = express.Router();
 // Create a new post in a group - requires group membership
 router.post('/', authenticateJWT, upload.single('image'), async (req: Request, res: Response) => {
   try {
-    const { title, content, group_id, user_id } = req.body;
-    
+    const { title, content, group_id } = req.body;
+    const user_id = req.user?.userId;
+    if (!user_id) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
     if (!title || !content || !group_id || !user_id) {
       res.status(400).json({ message: 'Title, content, group_id, and user_id are required' });
       return;
@@ -110,8 +115,12 @@ router.get('/group/:groupId', authenticateJWT, checkGroupMembership, async (req:
 router.get('/:postId', authenticateJWT, checkPostAccess, async (req: Request, res: Response) => {
   try {
     const { postId } = req.params;
-    const userId = req.body.user_id;
-      // Find the post with its author and comments
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+    // Find the post with its author and comments
     const post = await db.Post.findOne({
       where: { post_id: postId },
       include: [
@@ -189,8 +198,13 @@ router.get('/:postId', authenticateJWT, checkPostAccess, async (req: Request, re
 // Add a comment to a post - requires group membership
 router.post('/:postId/comments', authenticateJWT, checkPostAccess, upload.single('image'), async (req: Request, res: Response) => {  try {
     const { postId } = req.params;
-    const { content, user_id, parent_id } = req.body;
-    
+    const user_id = req.user?.userId;
+    const { content, parent_id } = req.body;
+    if (!user_id) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
     if (!content || !user_id) {
       res.status(400).json({ message: 'Content and user_id are required' });
       return;

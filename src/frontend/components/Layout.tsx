@@ -3,9 +3,10 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import '../styles/Layout.css';
-import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate } from '../../services/userServices';
+import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate, getCurrentUserId } from '../../services/userServices';
 import { getSessionData, clearSessionData } from '../../services/authServices';
 import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
+import { getUserGroups } from '../../services/membershipServices';
 
 interface LayoutProps {
   children: ReactNode;
@@ -24,6 +25,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   useEffect(() => {
     // Check for session (token) at the start
     const token = getSessionData();
+    const authHeaders: Record<string, string> = {};
+    if (token) authHeaders.Authorization = `Bearer ${token}`;
     if (!token && !isAuthPage) {
       // Clear state and redirect to login
       setCurrentUser(null);
@@ -36,7 +39,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       // Group Detail Page
       if (path.includes('/groups/') && params.groupId && !path.includes('new-post') && !path.includes('new')) {
         try {
-          const res = await fetch(`http://localhost:3000/api/groups`);
+          const res = await fetch(`http://localhost:3000/api/groups`, { headers: authHeaders });
           if (res.ok) {
             const groups = await res.json();
             const group = groups.find((g: any) => String(g.group_id) === params.groupId);
@@ -52,7 +55,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       // Post Detail Page
       else if (path.includes('/post/') && params.postId) {
         try {
-          const res = await fetch(`http://localhost:3000/api/posts/${params.postId}`);
+          const res = await fetch(`http://localhost:3000/api/posts/${params.postId}`, { headers: authHeaders });
           if (res.ok) {
             const post = await res.json();
             setSubtitle(`Post: ${post.title}`);
@@ -82,13 +85,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (!isAuthPage) {
       const fetchGroups = async () => {
         try {
-          const res = await fetch('http://localhost:3000/api/groups');
-          if (res.ok) {
-            const data = await res.json();
-            setGroups(data.slice(0, 5)); // Show just first 5 groups in sidebar
-          }
+          // Only groups the current user has joined
+          const userId = getCurrentUserId();
+          if (!userId) return;
+          const joined = await getUserGroups(userId);
+          setGroups(joined.slice(0, 5));
         } catch (error) {
-          console.error('Failed to fetch groups for sidebar:', error);
+          console.error('Failed to fetch user groups for sidebar:', error);
         }
       };
       const fetchCurrentUser = async () => {
@@ -154,7 +157,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 ) : (
                   <div className="sidebar-icon profile-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                      <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 5-4 5 3 5 4 1 1 1 1h8zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816zM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275zM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
                     </svg>
                   </div>
                 )}
