@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getGroupMemberCount } from '../../services/membershipServices';
 import { getSessionData } from '../../services/authServices';
-import { normalizeImageUrl, getFallbackImageSrc} from '../utils/imageHelper';
+import { getAllGroups } from '../../services/groupServices';
+import { normalizeImageUrl, getFallbackImageSrc, BACKEND_URL} from '../utils/imageHelper';
 import '../styles/GroupList.css';
 import '../styles/common.css';
 
@@ -26,18 +27,18 @@ const GroupListPage: React.FC = () => {
     if (!token) {
       navigate('/', { replace: true });
       return;
-    }
-    const fetchGroups = async () => {
+    }    const fetchGroups = async () => {
       try {
-        const res = await fetch('http://localhost:3000/api/groups');
-        if (!res.ok) throw new Error('Failed to fetch groups');
-        const data = await res.json();
-          // Fetch actual member count for each group
+        const data = await getAllGroups();
+        // Fetch actual member count for each group - map service Group to component Group
         const enhancedData = await Promise.all(
-          data.map(async (group: Group) => {
-            const memberCount = await getGroupMemberCount(group.group_id);
+          data.map(async (group: any) => {
+            const memberCount = await getGroupMemberCount(group.id);
             return {
-              ...group,
+              group_id: group.id,
+              name: group.name,
+              description: group.description,
+              image_url: group.image_url,
               member_count: memberCount
             };
           })
@@ -132,7 +133,7 @@ const GroupListPage: React.FC = () => {
                           const currentSrc = e.currentTarget.src;
                           if (currentSrc.includes('/uploads/groups/')) {
                             const filename = group.image_url?.split('/').pop();
-                            e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                            e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                             return;
                           }
                           

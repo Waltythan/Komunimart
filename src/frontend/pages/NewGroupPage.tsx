@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUserId } from '../../services/userServices';
+import { createGroup } from '../../services/groupServices';
 import '../styles/GroupList.css';
 import '../styles/common.css';
 
@@ -29,8 +30,7 @@ const NewGroupPage: React.FC = () => {
     if (!userId) {
       alert('User tidak ditemukan. Silakan login ulang.');
       return;
-    }
-    try {
+    }    try {
       const formData = new FormData();
       formData.append('name', name);
       formData.append('description', description);
@@ -40,16 +40,7 @@ const NewGroupPage: React.FC = () => {
         formData.append('image', selectedImage);
       }
       
-      const res = await fetch('http://localhost:3000/api/groups', {
-        method: 'POST',
-        body: formData,
-        // Don't set Content-Type header
-      });
-      
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Gagal membuat grup');
-      }
+      await createGroup(formData);
       
       alert('Grup berhasil dibuat!');
       navigate('/groups');

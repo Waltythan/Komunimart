@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { getCurrentUserId } from '../../services/userServices';
-import { deleteGroup } from '../../services/postServices';
+import { deleteGroup } from '../../services/groupServices';
 import EditGroupForm from './EditGroupForm';
 import '../styles/AdminPanel.css';
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { updateGroup } from '../../services/postServices';
+import { updateGroup } from '../../services/groupServices';
 import '../styles/EditGroupForm.css';
 import { normalizeImageUrl } from '../utils/imageHelper';
 

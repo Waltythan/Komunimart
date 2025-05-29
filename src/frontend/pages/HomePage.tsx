@@ -13,7 +13,7 @@ import {
   getPostLikeCount,
   Post as ServicePost
 } from '../../services';
-import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
+import { normalizeImageUrl, getFallbackImageSrc, BACKEND_URL } from '../utils/imageHelper';
 import '../styles/HomePage.css';
 
 // Helper function to adapt service post type to component post type
@@ -319,12 +319,11 @@ const HomePage: React.FC = () => {
                   {post.author?.profile_pic ? (
                     <img 
                       src={normalizeImageUrl(post.author.profile_pic, 'profiles')}
-                      alt={post.author.uname}
-                      onError={(e) => {
+                      alt={post.author.uname}                      onError={(e) => {
                         const currentSrc = e.currentTarget.src;
                         if (currentSrc.includes('/uploads/profiles/') && post.author?.profile_pic) {
                           const filename = post.author.profile_pic.split('/').pop();
-                          e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                          e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                           return;
                         }
                         const target = e.currentTarget as HTMLImageElement;
@@ -358,12 +357,11 @@ const HomePage: React.FC = () => {
                 <div className="post-image">
                   <img
                     src={normalizeImageUrl(post.image_url, 'posts')}
-                    alt="Post content"
-                    onError={(e) => {
+                    alt="Post content"                    onError={(e) => {
                       const currentSrc = e.currentTarget.src;
                       if (currentSrc.includes('/uploads/posts/') && post.image_url) {
                         const filename = post.image_url.split('/').pop();
-                        e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                        e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                         return;
                       }
                       e.currentTarget.src = getFallbackImageSrc(400, 300, 16);

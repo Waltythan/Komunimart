@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/AuthForm.css';
-import { storeSessionData } from '../../services/authServices';
+import { login, storeSessionData } from '../../services/authServices';
 
 export default function LoginPage() {
   const [uname, setUname] = useState('');
@@ -12,16 +12,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch('http://localhost:3000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uname, password }),
-      });
-
-      const responseData = await res.json();
-      if (!res.ok) {
-        throw new Error(responseData.message || 'Login failed');
-      }
+      const responseData = await login(uname, password);
       storeSessionData(responseData.token); // Store the token in sessionStorage
 
       alert(`Welcome, ${responseData.user.uname}!`);

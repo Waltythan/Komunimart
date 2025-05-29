@@ -201,16 +201,25 @@ export const getUserGroups = async (req: Request, res: Response): Promise<void> 
     
     // Find all memberships for this user with group details
     const memberships = await db.GroupMembership.findAll({
-      where: { user_id: userId },
-      include: [
+      where: { user_id: userId },      include: [
         {
           model: db.Group,
           attributes: ['group_id', 'name', 'description', 'image_url', 'created_at', 'created_by']
         }
       ]
     });
-      // Extract groups from memberships
-    const groups = memberships.map((membership: any) => membership.group);
+      // Extract groups from memberships and map group_id to id for consistency
+    const groups = memberships.map((membership: any) => {
+      const group = membership.group;
+      return {
+        id: group.group_id, // Map group_id to id for frontend consistency
+        name: group.name,
+        description: group.description,
+        image_url: group.image_url,
+        created_at: group.created_at,
+        created_by: group.created_by
+      };
+    });
     
     res.status(200).json(groups);
   } catch (err) {

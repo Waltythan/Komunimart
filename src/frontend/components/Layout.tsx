@@ -5,7 +5,9 @@ import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import '../styles/Layout.css';
 import { getCurrentUsername, getCurrentUserProfile, onProfileUpdate, getCurrentUserId } from '../../services/userServices';
 import { getSessionData, clearSessionData } from '../../services/authServices';
-import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
+import { getAllGroups } from '../../services/groupServices';
+import { getPostById } from '../../services/postServices';
+import { normalizeImageUrl, getFallbackImageSrc, BACKEND_URL } from '../utils/imageHelper';
 import { getUserGroups } from '../../services/membershipServices';
 
 interface LayoutProps {
@@ -16,10 +18,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname;
-  const params = useParams<{ groupId?: string, postId?: string }>();  const [subtitle, setSubtitle] = useState<string | undefined>();
+  const params = useParams<{ groupId?: string, postId?: string }>();
+  
+  const [subtitle, setSubtitle] = useState<string | undefined>();
   const [groups, setGroups] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
-    // Don't show navbar on authentication pages
+  
+  // Don't show navbar on authentication pages
   const isAuthPage = path === '/login' || path === '/register';
   
   useEffect(() => {
@@ -27,6 +32,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const token = getSessionData();
     const authHeaders: Record<string, string> = {};
     if (token) authHeaders.Authorization = `Bearer ${token}`;
+    
     if (!token && !isAuthPage) {
       // Clear state and redirect to login
       setCurrentUser(null);
@@ -35,32 +41,28 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       navigate('/login', { replace: true });
       return;
     }
+    
     const fetchPageData = async () => {
       // Group Detail Page
       if (path.includes('/groups/') && params.groupId && !path.includes('new-post') && !path.includes('new')) {
         try {
-          const res = await fetch(`http://localhost:3000/api/groups`, { headers: authHeaders });
-          if (res.ok) {
-            const groups = await res.json();
-            const group = groups.find((g: any) => String(g.group_id) === params.groupId);
-            if (group) {
-              setSubtitle(`Grup: ${group.name}`);
-              return;
-            }
+          const groups = await getAllGroups();
+          const group = groups.find((g: any) => String(g.id) === params.groupId);
+          if (group) {
+            setSubtitle(`Grup: ${group.name}`);
+            return;
           }
         } catch (err) {
           console.error('Error fetching group details for navbar:', err);
-        }        setSubtitle('Detail Grup');
+        }
+        setSubtitle('Detail Grup');
       } 
       // Post Detail Page
       else if (path.includes('/post/') && params.postId) {
         try {
-          const res = await fetch(`http://localhost:3000/api/posts/${params.postId}`, { headers: authHeaders });
-          if (res.ok) {
-            const post = await res.json();
-            setSubtitle(`Post: ${post.title}`);
-            return;
-          }
+          const post = await getPostById(params.postId);
+          setSubtitle(`Post: ${post.title}`);
+          return;
         } catch (err) {
           console.error('Error fetching post details for navbar:', err);
         }
@@ -70,7 +72,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       else if (path.includes('new-post')) {
         setSubtitle('Buat Postingan Baru');
       } else if (path.includes('/groups/new')) {
-        setSubtitle('Buat Grup Baru');      } else if (path === '/profile') {
+        setSubtitle('Buat Grup Baru');
+      } else if (path === '/profile') {
         setSubtitle('Profil Saya');
       } else if (path === '/groups') {
         setSubtitle('Daftar Grup');
@@ -94,6 +97,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           console.error('Failed to fetch user groups for sidebar:', error);
         }
       };
+      
       const fetchCurrentUser = async () => {
         try {
           const user = await getCurrentUserProfile();
@@ -109,12 +113,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           setCurrentUser({ uname: username });
         }
       };
+      
       fetchGroups();
       fetchCurrentUser();
       
       // Listen for profile updates
       const unsubscribe = onProfileUpdate(() => {
-
         fetchCurrentUser();
       });
       
@@ -194,7 +198,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   key={group.group_id} 
                   className="sidebar-item group-item"
                 >
-                  <div className="sidebar-group-image">                    {group.image_url ? (
+                  <div className="sidebar-group-image">
+                    {group.image_url ? (
                       <img 
                         src={normalizeImageUrl(group.image_url, 'groups')}
                         alt={group.name}                        onError={(e) => {
@@ -203,7 +208,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           if (currentSrc.includes('/uploads/groups/') && group.image_url) {
                             const filename = group.image_url.split('/').pop();
                             if (filename) {
-                              e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                              e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                               return;
                             }
                           }

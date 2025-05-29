@@ -59,6 +59,15 @@ export async function getProtectedPostById(postId: string): Promise<Post> {
 }
 
 /**
+ * Fetch a single post by ID (for navigation/title purposes)
+ * @param postId - ID of the post
+ * @returns Promise resolving to post data
+ */
+export async function getPostById(postId: string): Promise<Post> {
+  return apiFetch<Post>(`/posts/${postId}`);
+}
+
+/**
  * Fetch posts for a group (requires authentication)
  * Note: This function is also available in groupServices.ts as getGroupPosts
  * @param groupId - ID of the group
@@ -66,6 +75,15 @@ export async function getProtectedPostById(postId: string): Promise<Post> {
  */
 export async function getProtectedPostsByGroup(groupId: string): Promise<Post[]> {
   return apiFetch<Post[]>(`/protected-posts/group/${groupId}`);
+}
+
+/**
+ * Fetch public posts for a group (no authentication required)
+ * @param groupId - ID of the group
+ * @returns Promise resolving to array of posts
+ */
+export async function getPostsByGroup(groupId: string): Promise<Post[]> {
+  return apiFetch<Post[]>(`/posts/group/${groupId}`);
 }
 
 /**

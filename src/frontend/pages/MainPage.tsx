@@ -3,7 +3,9 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getGroupMemberCount } from '../../services/membershipServices';
 import { addBookmark, removeBookmark, checkBookmarkStatus } from '../../services/bookmarkServices';
 import { getSessionData } from '../../services/authServices';
-import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
+import { getAllGroups } from '../../services/groupServices';
+import { getPostsByGroup } from '../../services/postServices';
+import { normalizeImageUrl, getFallbackImageSrc, BACKEND_URL } from '../utils/imageHelper';
 import '../styles/MainPage.css';
 
 interface Post {
@@ -44,42 +46,41 @@ const MainPage: React.FC = () => {
       return;
     }
     const fetchData = async () => {
-      setLoading(true);
-      try {
+      setLoading(true);      try {
         // Fetch group details
-        const groupRes = await fetch(`http://localhost:3000/api/groups`);
-        let groups;
-        if (!groupRes.ok) {
-          // Only read the body once
-          const errorText = await groupRes.text();
-          console.error('[MainPage] Failed to fetch groups:', groupRes.status, errorText);
-          throw new Error('Failed to fetch groups');
-        } else {
-          groups = await groupRes.json();
-        }
-        const currentGroup = groups.find((g: any) => String(g.group_id) === groupId);
+        const groups = await getAllGroups();
+        const currentGroup = groups.find((g: any) => String(g.id) === groupId);
         if (currentGroup) {
           // Fetch actual member count for this group
-          const memberCount = await getGroupMemberCount(currentGroup.group_id);
+          const memberCount = await getGroupMemberCount(currentGroup.id);
           setGroup({
-            ...currentGroup,
+            group_id: currentGroup.id,
+            name: currentGroup.name,
+            description: currentGroup.description,
+            image_url: currentGroup.image_url,
+            created_at: currentGroup.created_at,
+            created_by: currentGroup.created_by,
             member_count: memberCount
           });
         } else {
           setError("Group not found");
-        }        // Fetch posts for this group
-        const postsRes = await fetch(`http://localhost:3000/api/posts/group/${groupId}`);
-        if (postsRes.ok) {
-          const postsData = await postsRes.json();
-          // Enhance posts with placeholder data
-          const enhancedPosts = postsData.map((post: Post) => ({
-            ...post,
-            comments_count: Math.floor(Math.random() * 10),
-            likes_count: Math.floor(Math.random() * 20),
-            author_name: `User ${post.author_id.substring(0, 5)}`,
-          }));
-          setPosts(enhancedPosts);
         }
+
+        // Fetch posts for this group
+        const postsData = await getPostsByGroup(groupId!);
+        // Enhance posts with placeholder data - map service Post to component Post
+        const enhancedPosts = postsData.map((post: any) => ({
+          post_id: post.id || post.post_id,
+          title: post.title,
+          content: post.content,
+          author_id: post.created_by || post.author_id,
+          created_at: post.created_at,
+          image_url: post.image_url,
+          comments_count: Math.floor(Math.random() * 10),
+          likes_count: Math.floor(Math.random() * 20),
+          author_name: `User ${(post.created_by || post.author_id).substring(0, 5)}`,
+        }));
+        setPosts(enhancedPosts);
       } catch (err) {
         setError("Failed to load group data");
         console.error('[MainPage] Caught error in fetchData:', err);
@@ -151,7 +152,7 @@ const MainPage: React.FC = () => {
                 if (currentSrc.includes('/uploads/groups/') && group.image_url) {
                   const filename = group.image_url.split('/').pop();
                   if (filename) {
-                    e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                    e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                     return;
                   }
                 }
@@ -298,7 +299,7 @@ const MainPage: React.FC = () => {
                             if (currentSrc.includes('/uploads/posts/') && post.image_url) {
                               const filename = post.image_url.split('/').pop();
                               if (filename) {
-                                e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                                e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                                 return;
                               }
                             }

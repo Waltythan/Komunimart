@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/AuthForm.css';
+import { register } from '../../services/authServices';
 
 export default function RegisterPage() {
   const [uname, setUname] = useState('');
@@ -37,24 +38,14 @@ export default function RegisterPage() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleRegister = async () => {
     if (!validateForm()) {
       return;
     }
 
     try {
-      const res = await fetch('http://localhost:3000/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uname, email, password }),
-      });
-      
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || 'Registration failed');
-      }
-        alert('Registration successful!');
+      await register(uname, email, password);
+      alert('Registration successful!');
       navigate('/login');
     } catch (err: any) {
       alert('Registration failed: ' + err.message);

@@ -7,6 +7,8 @@ import MembersList from '../components/MembersList';
 import AdminPanel from '../components/AdminPanel';
 import { getSessionData } from '../../services/authServices';
 import { getUserById } from '../../services/userServices';
+import { getAllGroups } from '../../services/groupServices';
+import { getProtectedPostsByGroup } from '../../services/postServices';
 import { normalizeImageUrl, getFallbackImageSrc, BACKEND_URL } from '../utils/imageHelper';
 
 interface GroupDetails {
@@ -40,19 +42,25 @@ const GroupDetailPage: React.FC = () => {
       setLoading(true);
       try {
         // Fetch group details
-        const groupRes = await fetch(`http://localhost:3000/api/groups`);
-        if (groupRes.ok) {
-          const groups = await groupRes.json();          const group = groups.find((g: any) => String(g.group_id) === groupId);
-          if (group) {
-            setGroupDetails(group);
-            // Fetch creator details
-            const creatorRes = await getUserById(group.created_by);
-            if (creatorRes) {
-              setCreator(creatorRes);
-            }
-          } else {
-            setError('Group not found');
+        const groups = await getAllGroups();
+        const group = groups.find((g: any) => String(g.id) === groupId);
+        if (group) {
+          // Map service Group to component GroupDetails
+          setGroupDetails({
+            group_id: group.id,
+            name: group.name,
+            description: group.description,
+            created_by: group.created_by,
+            created_at: group.created_at,
+            image_url: group.image_url
+          });
+          // Fetch creator details
+          const creatorRes = await getUserById(group.created_by);
+          if (creatorRes) {
+            setCreator(creatorRes);
           }
+        } else {
+          setError('Group not found');
         }
       } catch (error) {
         console.error('Error fetching group details:', error);
@@ -63,25 +71,13 @@ const GroupDetailPage: React.FC = () => {
     };
     if (groupId) fetchData();
   }, [groupId]);  // Effect to fetch posts when membership status changes
-  useEffect(() => {
-    const fetchPosts = async () => {
+  useEffect(() => {    const fetchPosts = async () => {
       if (!groupId || !isMember) return;
       
       setLoading(true);      try {
-        const token = getSessionData();
-        // Use the protected posts route to get posts with author information
-        const postsRes = await fetch(`http://localhost:3000/api/protected-posts/group/${groupId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (postsRes.ok) {
-          setPosts(await postsRes.json());
-        } else {
-          const errorData = await postsRes.json();
-          console.error('Error fetching posts:', errorData);
-        }
+        // Use centralized service for protected posts
+        const postsData = await getProtectedPostsByGroup(groupId);
+        setPosts(postsData);
       } catch (error) {
         console.error('Error fetching posts:', error);
       } finally {
@@ -100,29 +96,33 @@ const GroupDetailPage: React.FC = () => {
   };
   const handleGroupDeleted = () => {
     navigate('/groups');
-  };
-  const handleGroupUpdated = () => {
+  };  const handleGroupUpdated = () => {
     // Refresh group details after update
     if (groupId) {
       const fetchGroupDetails = async () => {
         try {
-          const groupRes = await fetch(`http://localhost:3000/api/groups`);
-          if (groupRes.ok) {
-            const groups = await groupRes.json();
-            const group = groups.find((g: any) => String(g.group_id) === groupId);
-            if (group) {
-              setGroupDetails(group);
-              
-              // Also refresh creator details if needed
-              if (group.created_by) {
-                try {
-                  const creatorData = await getUserById(group.created_by);
-                  if (creatorData) {
-                    setCreator(creatorData);
-                  }
-                } catch (creatorError) {
-                  console.error('Error refreshing creator details:', creatorError);
+          const groups = await getAllGroups();
+          const group = groups.find((g: any) => String(g.id) === groupId);
+          if (group) {
+            // Map service Group to component GroupDetails
+            setGroupDetails({
+              group_id: group.id,
+              name: group.name,
+              description: group.description,
+              created_by: group.created_by,
+              created_at: group.created_at,
+              image_url: group.image_url
+            });
+            
+            // Also refresh creator details if needed
+            if (group.created_by) {
+              try {
+                const creatorData = await getUserById(group.created_by);
+                if (creatorData) {
+                  setCreator(creatorData);
                 }
+              } catch (creatorError) {
+                console.error('Error refreshing creator details:', creatorError);
               }
             }
           }

@@ -72,14 +72,13 @@ export async function getUserById(userId: string): Promise<any> {
 
 // Function to get current authenticated user data
 export async function getCurrentUser(): Promise<any> {
-  try {
-    const token = getSessionData();
+  try {    const token = getSessionData();
     if (!token) {
       throw new Error('No authentication token found');
     }
 
-    // /me is a root endpoint, not under /api
-    const response = await fetch('http://localhost:3000/me', {
+    // /profile/me is the correct endpoint
+    const response = await fetch('http://localhost:3000/profile/me', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -97,16 +96,15 @@ export async function getCurrentUser(): Promise<any> {
 }
 
 // Function to get current user profile
-export async function getCurrentUserProfile(): Promise<any> {
-  try {
+export async function getCurrentUserProfile(): Promise<any> {  try {
     const token = getSessionData();
     if (!token) {
       console.error('[getCurrentUserProfile] No authentication token found');
       throw new Error('No authentication token found');
     }
 
-    // /me is a root endpoint, not under /api
-    const response = await fetch('http://localhost:3000/me', {
+    // /profile/me is the correct endpoint
+    const response = await fetch('http://localhost:3000/profile/me', {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

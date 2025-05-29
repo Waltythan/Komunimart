@@ -4,10 +4,21 @@ import '../styles/PostDetail.css';
 import '../styles/common.css';
 import { getCurrentUserId, getCurrentUserProfile } from '../../services/userServices';
 import { getSessionData } from '../../services/authServices';
+import { 
+  getProtectedPostById, 
+  getCommentsByPost, 
+  createCommentOnPost,
+  getPostLikeCount,
+  getCommentLikeCount,
+  addPostLike,
+  removePostLike,
+  addCommentLike,
+  removeCommentLike
+} from '../../services/postServices';
 import PostActions from '../components/PostActions';
 import CommentActions from '../components/CommentActions';
 import { addBookmark, removeBookmark, checkBookmarkStatus } from '../../services/bookmarkServices';
-import { normalizeImageUrl, getFallbackImageSrc } from '../utils/imageHelper';
+import { normalizeImageUrl, getFallbackImageSrc, BACKEND_URL } from '../utils/imageHelper';
 
 // Komentar dari backend
 interface Comment {
@@ -68,49 +79,40 @@ const PostDetail: React.FC = () => {
   const [isRestricted, setIsRestricted] = useState<boolean>(false);
   const [restrictedGroupId, setRestrictedGroupId] = useState<string | null>(null);
   const [bookmarked, setBookmarked] = useState(false);
-
   // Fetch post detail & comments
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const token = getSessionData();
-        // Use the protected post route that checks for group membership
-        const postRes = await fetch(`http://localhost:3000/api/protected-posts/${postId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (postRes.ok) {
-          const postData = await postRes.json();
+        // Use the protected post service that checks for group membership
+        try {
+          const postData = await getProtectedPostById(postId!);
           setPost(postData);
           setIsRestricted(false);
-        } else {
-          const errorData = await postRes.json();
-          if (postRes.status === 403 && errorData.error === 'Access denied') {
-            // Set post with restricted info
+        } catch (error: any) {
+          if (error.message.includes('403') || error.message.includes('Access denied')) {
+            // Set post with restricted info - extract group_id from error if available
             setIsRestricted(true);
-            setRestrictedGroupId(errorData.group_id);
+            // Try to extract group_id from error, or set a default
+            const groupIdMatch = error.message.match(/group_id[:\s]+([a-zA-Z0-9-]+)/);
+            setRestrictedGroupId(groupIdMatch ? groupIdMatch[1] : null);
             return; // Don't try to load comments if access is denied
           }
+          throw error; // Re-throw other errors
         }
-        // Only fetch comments if we have access to the post
-        const commentRes = await fetch(`http://localhost:3000/api/posts/${postId}/comments`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (commentRes.ok) {
-          const commentData = await commentRes.json();
-          // Use author data from backend response
-          const enhancedComments = commentData.map((comment: Comment) => ({
-            ...comment,
-            created_at: comment.created_at || new Date().toISOString(),
-          }));
-          setComments(enhancedComments);
-        }
+          // Only fetch comments if we have access to the post
+        const commentData = await getCommentsByPost(postId!);
+        // Use author data from backend response - map service comment to component comment
+        const enhancedComments = commentData.map((comment: any) => ({
+          comment_id: comment.id || comment.comment_id,
+          author_id: comment.created_by || comment.author_id,
+          text: comment.content || comment.text,
+          parent_id: comment.parent_id,
+          author: comment.author,
+          image_url: comment.image_url,
+          created_at: comment.created_at || new Date().toISOString(),
+        }));
+        setComments(enhancedComments);
       } catch (error) {
         console.error('Error fetching post data:', error);
       } finally {
@@ -119,50 +121,43 @@ const PostDetail: React.FC = () => {
     };
     if (postId) fetchData();
   }, [postId]);
-
   // Function to refresh comments
   const refreshComments = async () => {
     if (!postId) return;
 
     try {
-      const token = getSessionData();
-      const commentRes = await fetch(`http://localhost:3000/api/posts/${postId}/comments`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (commentRes.ok) {
-        const commentData = await commentRes.json();
-        const enhancedComments = commentData.map((comment: Comment) => ({
-          ...comment,
-          created_at: comment.created_at || new Date().toISOString(),
-        }));
-        setComments(enhancedComments);
-      }
+      const commentData = await getCommentsByPost(postId);
+      const enhancedComments = commentData.map((comment: any) => ({
+        comment_id: comment.id || comment.comment_id,
+        author_id: comment.created_by || comment.author_id,
+        text: comment.content || comment.text,
+        parent_id: comment.parent_id,
+        author: comment.author,
+        image_url: comment.image_url,
+        created_at: comment.created_at || new Date().toISOString(),
+      }));
+      setComments(enhancedComments);
     } catch (error) {
       console.error('Error refreshing comments:', error);
     }
   };
-
   // Fetch post likes
   useEffect(() => {
     const fetchLikes = async () => {
       if (!postId) return;
       const userId = getCurrentUserId();
-      let url = `http://localhost:3000/api/posts/likes/count?likeable_id=${postId}&likeable_type=Post`;
-      if (userId) {
-        url += `&user_id=${userId}`;
-      }
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
+      try {
+        const data = await getPostLikeCount(postId, userId || undefined);
         setPostLikes(data.count || 0);
         setPostLiked(data.likedByUser || false);
+      } catch (error) {
+        console.error('Error fetching post likes:', error);
+        setPostLikes(0);
+        setPostLiked(false);
       }
     };
     fetchLikes();
   }, [postId, userId]);
-
   // Fetch comment likes when comments change
   useEffect(() => {
     const fetchCommentLikes = async () => {
@@ -170,18 +165,10 @@ const PostDetail: React.FC = () => {
       const likeCounts: Record<string, number> = {};
       const likedStates: Record<string, boolean> = {};
       await Promise.all(comments.map(async (comment) => {
-        let url = `http://localhost:3000/api/posts/likes/count?likeable_id=${comment.comment_id}&likeable_type=Comment`;
-        if (userId) url += `&user_id=${userId}`;
         try {
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json();
-            likeCounts[comment.comment_id] = data.count || 0;
-            likedStates[comment.comment_id] = data.likedByUser || false;
-          } else {
-            likeCounts[comment.comment_id] = 0;
-            likedStates[comment.comment_id] = false;
-          }
+          const data = await getCommentLikeCount(comment.comment_id, userId || undefined);
+          likeCounts[comment.comment_id] = data.count || 0;
+          likedStates[comment.comment_id] = data.likedByUser || false;
         } catch (e) {
           likeCounts[comment.comment_id] = 0;
           likedStates[comment.comment_id] = false;
@@ -241,7 +228,6 @@ const PostDetail: React.FC = () => {
       minute: '2-digit'
     });
   };
-
   // Submit comment or reply
   const handleAddComment = async () => {
     if (!newComment.trim() && !selectedImage) return;
@@ -260,71 +246,45 @@ const PostDetail: React.FC = () => {
 
       if (selectedImage) {
         formData.append('image', selectedImage);
-      } const res = await fetch(`http://localhost:3000/api/protected-posts/${postId}/comments`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getSessionData()}`
-        },
-        body: formData,
-      });
+      }
 
-      if (!res.ok) throw new Error('Gagal menambah komentar');
+      await createCommentOnPost(postId!, formData);
 
       setNewComment('');
       setReplyTo(null);
       setReplyToName(null);
       setSelectedImage(null);
       setImagePreview(null);
+      
       // Refresh comments
-      const commentRes = await fetch(`http://localhost:3000/api/posts/${postId}/comments`, {
-        headers: {
-          'Authorization': `Bearer ${getSessionData()}`
-        }
-      });
-      if (commentRes.ok) {
-        const commentData = await commentRes.json();
-        const enhancedComments = commentData.map((comment: Comment) => ({
-          ...comment,
-          created_at: comment.created_at || new Date().toISOString(),
-        }));
-        setComments(enhancedComments);
-      }
+      await refreshComments();
     } catch (err) {
       alert('Gagal menambah komentar');
     }
   };
-
   // Like post
   const handleLikePost = async () => {
     if (!postId || !userId) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/posts/likes`, {
-        method: postLiked ? 'DELETE' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          likeable_id: postId,
-          likeable_type: 'Post',
-        })
-      });
-      if (!res.ok) {
-        console.error('Like API error:', await res.text());
-        return;
-      }
-
       // Optimistic update
       setPostLiked(!postLiked);
       setPostLikes(prevLikes => postLiked ? prevLikes - 1 : prevLikes + 1);
 
-      // After like/unlike, fetch the latest count from the database for accuracy
-      const countRes = await fetch(`http://localhost:3000/api/posts/likes/count?likeable_id=${postId}&likeable_type=Post&user_id=${userId}`);
-      if (countRes.ok) {
-        const data = await countRes.json();
-        setPostLikes(data.count || 0);
-        setPostLiked(data.likedByUser || false);
+      if (postLiked) {
+        await removePostLike(postId, userId);
+      } else {
+        await addPostLike(postId, userId);
       }
+
+      // After like/unlike, fetch the latest count from the database for accuracy
+      const data = await getPostLikeCount(postId, userId);
+      setPostLikes(data.count || 0);
+      setPostLiked(data.likedByUser || false);
     } catch (e) {
       console.error('Unexpected error in handleLikePost:', e);
+      // Revert optimistic update on error
+      setPostLiked(postLiked);
+      setPostLikes(prevLikes => postLiked ? prevLikes + 1 : prevLikes - 1);
     }
   };
 
@@ -377,13 +337,11 @@ const PostDetail: React.FC = () => {
                     src={normalizeImageUrl(comment.author.profile_pic, 'profiles')}
                     alt={comment.author.uname}
                     onError={(e) => {
-                      console.error(`Failed to load comment author profile image: ${e.currentTarget.src}`);
-
-                      // Try direct URL fallback
+                      console.error(`Failed to load comment author profile image: ${e.currentTarget.src}`);                      // Try direct URL fallback
                       const currentSrc = e.currentTarget.src;
                       if (currentSrc.includes('/uploads/profiles/') && comment.author?.profile_pic) {
                         const filename = comment.author.profile_pic.split('/').pop();
-                        e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                        e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                         return;
                       }
 
@@ -449,10 +407,9 @@ const PostDetail: React.FC = () => {
                       alt="Comment attachment"
                       onError={(e) => {
                         // Try direct URL without type folder as fallback
-                        const currentSrc = e.currentTarget.src;
-                        if (currentSrc.includes('/uploads/comments/') && comment.image_url) {
+                        const currentSrc = e.currentTarget.src;                        if (currentSrc.includes('/uploads/comments/') && comment.image_url) {
                           const filename = comment.image_url.split('/').pop();
-                          e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                          e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                           return;
                         }
 
@@ -500,7 +457,6 @@ const PostDetail: React.FC = () => {
       );
     });
   };
-
   // Like comment handler (with count and error handling)
   const handleLikeComment = async (commentId: string) => {
     if (!userId) {
@@ -515,34 +471,17 @@ const PostDetail: React.FC = () => {
         ...prev,
         [commentId]: liked ? Math.max(0, (prev[commentId] || 1) - 1) : (prev[commentId] || 0) + 1
       }));
-      const res = await fetch(`http://localhost:3000/api/posts/likes`, {
-        method: liked ? 'DELETE' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          likeable_id: commentId,
-          likeable_type: 'Comment',
-        })
-      });
 
-      if (!res.ok) {
-        console.error('Comment like API error:', await res.text());
-        // Revert optimistic update on failure
-        setCommentLiked((prev) => ({ ...prev, [commentId]: liked }));
-        setCommentLikes((prev) => ({
-          ...prev,
-          [commentId]: liked ? (prev[commentId] || 0) + 1 : Math.max(0, (prev[commentId] || 1) - 1)
-        }));
-        return;
+      if (liked) {
+        await removeCommentLike(commentId, userId);
+      } else {
+        await addCommentLike(commentId, userId);
       }
 
       // After like/unlike, fetch the latest count from the database for accuracy
-      const countRes = await fetch(`http://localhost:3000/api/posts/likes/count?likeable_id=${commentId}&likeable_type=Comment&user_id=${userId}`);
-      if (countRes.ok) {
-        const data = await countRes.json();
-        setCommentLikes((prev) => ({ ...prev, [commentId]: data.count || 0 }));
-        setCommentLiked((prev) => ({ ...prev, [commentId]: data.likedByUser || false }));
-      }
+      const data = await getCommentLikeCount(commentId, userId);
+      setCommentLikes((prev) => ({ ...prev, [commentId]: data.count || 0 }));
+      setCommentLiked((prev) => ({ ...prev, [commentId]: data.likedByUser || false }));
     } catch (e) {
       console.error('Unexpected error in handleLikeComment:', e);
       // Revert optimistic update on error
@@ -631,14 +570,13 @@ const PostDetail: React.FC = () => {
       <div className="post-card">        <div className="post-header">
         <div className="post-author">            <div className="author-avatar">              {post.author?.profile_pic ? (<img
           src={normalizeImageUrl(post.author.profile_pic, 'profiles')}
-          alt={post.author.uname}
-          onError={(e) => {
+          alt={post.author.uname}          onError={(e) => {
             // Try direct URL without type folder as a fallback
             const currentSrc = e.currentTarget.src;
             if (currentSrc.includes('/uploads/profiles/')) {
               const filename = post.author.profile_pic.split('/').pop();
               if (filename) {
-                e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                 return;
               }
             }
@@ -679,10 +617,9 @@ const PostDetail: React.FC = () => {
                 alt={post.title}
                 onError={(e) => {
                   // Try direct URL without type folder as fallback
-                  const currentSrc = e.currentTarget.src;
-                  if (currentSrc.includes('/uploads/posts/')) {
+                  const currentSrc = e.currentTarget.src;                  if (currentSrc.includes('/uploads/posts/')) {
                     const filename = post.image_url?.split('/').pop();
-                    e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                    e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                     return;
                   }
 
@@ -745,12 +682,11 @@ const PostDetail: React.FC = () => {
                 <img
                   src={normalizeImageUrl(currentUserProfile.profile_pic, 'profiles')}
                   alt={currentUserProfile.uname}
-                  onError={(e) => {
-                    // Try direct URL fallback
+                  onError={(e) => {                    // Try direct URL fallback
                     const currentSrc = e.currentTarget.src;
                     if (currentSrc.includes('/uploads/profiles/') && currentUserProfile?.profile_pic) {
                       const filename = currentUserProfile.profile_pic.split('/').pop();
-                      e.currentTarget.src = `http://localhost:3000/uploads/${filename}`;
+                      e.currentTarget.src = `${BACKEND_URL}/uploads/${filename}`;
                       return;
                     }
 

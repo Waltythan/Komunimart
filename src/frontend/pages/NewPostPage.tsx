@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getCurrentUserId } from '../../services/userServices';
 import { checkGroupMembership, isGroupCreator } from '../../services/membershipServices';
 import { getSessionData } from '../../services/authServices';
+import { createPost } from '../../services/postServices';
+import { getGroupById } from '../../services/groupServices';
 import '../styles/NewPostPage.css';
 import '../styles/common.css';
 
@@ -34,9 +36,7 @@ const NewPostPage: React.FC = () => {  const { groupId } = useParams();
     if (!userId) {
       alert('User tidak ditemukan. Silakan login ulang.');
       return;
-    }
-
-    try {
+    }    try {
       const formData = new FormData();
       formData.append('title', title);
       formData.append('content', content);
@@ -45,20 +45,10 @@ const NewPostPage: React.FC = () => {  const { groupId } = useParams();
       
       if (selectedImage) {
         formData.append('image', selectedImage);
-      }      // Use protected post route that checks for membership
-      const token = getSessionData();
-      const res = await fetch(`http://localhost:3000/api/protected-posts`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Gagal menambahkan post');
       }
+
+      // Use centralized post service
+      await createPost(formData);
 
       alert('Post berhasil ditambahkan!');
       navigate(`/groups/${groupId}`);
@@ -81,18 +71,15 @@ const NewPostPage: React.FC = () => {  const { groupId } = useParams();
           navigate('/login');
           return;
         }        // Fetch group details
-        const groupRes = await fetch(`http://localhost:3000/api/groups/${groupId}`);
-        if (groupRes.ok) {
-          const groupData = await groupRes.json();
-          setGroupName(groupData.name || 'Group');
-          
-          // Check if user is the creator
-          if (groupData.created_by === userId) {
-            setIsCreator(true);
-            setIsMember(true); // Creators are automatically members
-            setLoading(false);
-            return; // No need to check membership if user is creator
-          }
+        const groupData = await getGroupById(groupId);
+        setGroupName(groupData.name || 'Group');
+        
+        // Check if user is the creator
+        if (groupData.created_by === userId) {
+          setIsCreator(true);
+          setIsMember(true); // Creators are automatically members
+          setLoading(false);
+          return; // No need to check membership if user is creator
         }
 
         // Check if user is a member of the group
