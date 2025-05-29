@@ -1,28 +1,39 @@
 import { Request, Response } from 'express';
 const db = require('../../../models');
 import { upload, getImageUrl } from '../utils/fileUpload';
+import { deleteFile } from '../utils/fileManager';
 
-export const createPost = async (req: Request, res: Response) => {
+/**
+ * Create a new post
+ */
+export const createPost = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { group_id, user_id, title, content } = req.body;
-    if (!group_id || !user_id || !title || !content) {
-      res.status(400).json({ error: 'group_id, user_id, title, and content are required' });
+    const { title, content, group_id, user_id } = req.body;
+    
+    if (!title || !content || !group_id || !user_id) {
+      res.status(400).json({ message: 'Title, content, group_id, and user_id are required' });
       return;
     }
+    
     const post = await db.Post.create({
-      group_id,
-      author_id: user_id,
       title,
       content,
+      group_id,
+      author_id: user_id,
+      image_url: req.file ? req.file.filename : null
     });
-    res.status(201).json(post);
+    
+    res.status(201).json({
+      ...post.toJSON(),
+      image_url: getImageUrl(req.file?.filename, 'post')
+    });
   } catch (err) {
     console.error('Error creating post:', err);
     res.status(500).json({ error: 'Failed to create post' });
   }
 };
 
-export const getPostsByGroup = async (req: Request, res: Response) => {
+export const getPostsByGroup = async (req: Request, res: Response): Promise<void> => {
   try {
     const posts = await db.Post.findAll({
       where: { group_id: req.params.groupId },
@@ -34,7 +45,7 @@ export const getPostsByGroup = async (req: Request, res: Response) => {
   }
 };
 
-export const getPostById = async (req: Request, res: Response) => {
+export const getPostById = async (req: Request, res: Response): Promise<void> => {
   try {
     const post = await db.Post.findByPk(req.params.postId);
     if (!post) {
@@ -87,7 +98,7 @@ export const postCommentsMiddleware = [
   },
 ];
 
-export const getCommentsByPost = async (req: Request, res: Response) => {
+export const getCommentsByPost = async (req: Request, res: Response): Promise<void> => {
   try {
     const comments = await db.Comment.findAll({
       where: { post_id: req.params.postId },
@@ -120,7 +131,7 @@ export const getCommentsByPost = async (req: Request, res: Response) => {
   }
 };
 
-export const addComment = async (req: Request, res: Response) => {
+export const addComment = async (req: Request, res: Response): Promise<void> => {
   try {
     const { user_id, text, parent_id } = req.body;
     const { postId } = req.params;
@@ -157,15 +168,19 @@ export const addComment = async (req: Request, res: Response) => {
 };
 
 // LIKE CONTROLLERS
-export const likeItem = async (req: Request, res: Response) => {
+export const likeItem = async (req: Request, res: Response): Promise<void> => {
   try {
     const { user_id, likeable_id, likeable_type } = req.body;
     if (!user_id || !likeable_id || !likeable_type) {
-      return res.status(400).json({ error: 'user_id, likeable_id, and likeable_type are required' });
+      res.status(400).json({ error: 'user_id, likeable_id, and likeable_type are required' });
+      return;
     }
     // Prevent duplicate likes
     const existing = await db.Like.findOne({ where: { user_id, likeable_id, likeable_type } });
-    if (existing) return res.status(409).json({ error: 'Already liked' });
+    if (existing) {
+      res.status(409).json({ error: 'Already liked' });
+      return;
+    }
     const like = await db.Like.create({ user_id, likeable_id, likeable_type });
     res.status(201).json(like);
   } catch (err) {
@@ -174,25 +189,30 @@ export const likeItem = async (req: Request, res: Response) => {
   }
 };
 
-export const unlikeItem = async (req: Request, res: Response) => {
+export const unlikeItem = async (req: Request, res: Response): Promise<void> => {
   try {
     const { user_id, likeable_id, likeable_type } = req.body;
     if (!user_id || !likeable_id || !likeable_type) {
-      return res.status(400).json({ error: 'user_id, likeable_id, and likeable_type are required' });
+      res.status(400).json({ error: 'user_id, likeable_id, and likeable_type are required' });
+      return;
     }
     const deleted = await db.Like.destroy({ where: { user_id, likeable_id, likeable_type } });
-    if (deleted) return res.json({ message: 'Unliked' });
+    if (deleted) {
+      res.json({ message: 'Unliked' });
+      return;
+    }
     res.status(404).json({ error: 'Like not found' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to unlike' });
   }
 };
 
-export const getLikeCount = async (req: Request, res: Response) => {
+export const getLikeCount = async (req: Request, res: Response): Promise<void> => {
   try {
     const { likeable_id, likeable_type, user_id } = req.query;
     if (!likeable_id || !likeable_type) {
-      return res.status(400).json({ error: 'likeable_id and likeable_type are required' });
+      res.status(400).json({ error: 'likeable_id and likeable_type are required' });
+      return;
     }
     const count = await db.Like.count({ where: { likeable_id, likeable_type } });
     let likedByUser = false;
@@ -208,7 +228,7 @@ export const getLikeCount = async (req: Request, res: Response) => {
 };
 
 // Delete a post (admin or author only)
-export const deletePost = async (req: Request, res: Response) => {
+export const deletePost = async (req: Request, res: Response): Promise<void> => {
   try {
     const { postId } = req.params;
     const { deleted_by } = req.body;
@@ -279,6 +299,31 @@ export const deletePost = async (req: Request, res: Response) => {
     res.status(200).json({
       message: 'Post deleted successfully'
     });
+  } catch (err) {
+    console.error('Error deleting post:', err);
+    res.status(500).json({ error: 'Failed to delete post' });
+  }
+};
+
+// Delete a post directly (simple version)
+export const deletePostSimple = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { postId } = req.params;
+    
+    const post = await db.Post.findByPk(postId);
+    if (!post) {
+      res.status(404).json({ message: 'Post not found' });
+      return;
+    }
+    
+    // Delete image if it exists
+    if (post.image_url) {
+      await deleteFile(post.image_url, 'post');
+    }
+    
+    await post.destroy();
+    
+    res.json({ message: 'Post deleted successfully' });
   } catch (err) {
     console.error('Error deleting post:', err);
     res.status(500).json({ error: 'Failed to delete post' });

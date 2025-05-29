@@ -9,43 +9,16 @@ import {
   unlikeItem,
   getLikeCount,
   deletePost,
-  deleteComment
+  deleteComment,
+  deletePostSimple
 } from '../controllers/postController';
-import { upload, getImageUrl } from '../utils/fileUpload';
+import { upload } from '../utils/fileUpload';
 import { authenticateJWT } from '../middlewares/auth.middleware';
-import { deleteFile } from '../utils/fileManager';
-// Tambahkan import db
-const db = require('../../../models');
 
 const router = express.Router();
 
 // Create a new post in a group
-router.post('/', upload.single('image'), async (req, res) => {
-  try {
-    const { title, content, group_id, user_id } = req.body;
-    
-    if (!title || !content || !group_id || !user_id) {
-      res.status(400).json({ message: 'Title, content, group_id, and user_id are required' });
-      return;
-    }
-    
-    const post = await db.Post.create({
-      title,
-      content,
-      group_id,
-      author_id: user_id,
-      image_url: req.file ? req.file.filename : null
-    });
-    
-    res.status(201).json({
-      ...post.toJSON(),
-      image_url: getImageUrl(req.file?.filename, 'post')
-    });
-  } catch (err) {
-    console.error('Error creating post:', err);
-    res.status(500).json({ error: 'Failed to create post' });
-  }
-});
+router.post('/', upload.single('image'), createPost);
 
 // Get all posts in a group
 router.get('/group/:groupId', getPostsByGroup);
@@ -60,34 +33,12 @@ router.get('/:postId', getPostById);
 router.get('/:postId/comments', getCommentsByPost);
 
 // Like endpoints (must be above /:postId route to avoid route collision)
-router.post('/likes', function(req, res) { likeItem(req, res); });
-router.delete('/likes', function(req, res) { unlikeItem(req, res); });
-router.get('/likes/count', function(req, res) { getLikeCount(req, res); });
+router.post('/likes', likeItem);
+router.delete('/likes', unlikeItem);
+router.get('/likes/count', getLikeCount);
 
-// Endpoint delete post
-router.delete('/:postId', async (req, res) => {
-  try {
-    const { postId } = req.params;
-    
-    const post = await db.Post.findByPk(postId);
-    if (!post) {
-      res.status(404).json({ message: 'Post not found' });
-      return;
-    }
-    
-    // Hapus gambar jika ada
-    if (post.image_url) {
-      await deleteFile(post.image_url, 'post');
-    }
-    
-    await post.destroy();
-    
-    res.json({ message: 'Post deleted successfully' });
-  } catch (err) {
-    console.error('Error deleting post:', err);
-    res.status(500).json({ error: 'Failed to delete post' });
-  }
-});
+// Endpoint delete post (simple version)
+router.delete('/:postId', deletePostSimple);
 
 // Delete post with admin/author check (requires authentication)
 router.delete('/admin/:postId', authenticateJWT, deletePost);

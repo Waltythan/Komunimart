@@ -1,5 +1,43 @@
 import { Request, Response } from 'express';
 const db = require('../../../models');
+import { getImageUrl } from '../utils/fileUpload';
+import { deleteFile } from '../utils/fileManager';
+
+/**
+ * Create a group with image upload support
+ */
+export const createGroupWithImage = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, description, created_by } = req.body;
+    
+    if (!name || !created_by) {
+      res.status(400).json({ message: 'Name and created_by are required' });
+      return;
+    }
+    
+    const group = await db.Group.create({
+      name,
+      description,
+      created_by,
+      image_url: req.file ? req.file.filename : null
+    });
+    
+    // Automatically add the creator as an admin member
+    await db.GroupMembership.create({
+      user_id: created_by,
+      group_id: group.group_id,
+      role: 'admin'
+    });
+    
+    res.status(201).json({
+      ...group.toJSON(),
+      image_url: getImageUrl(req.file?.filename, 'group')
+    });
+  } catch (err) {
+    console.error('Error creating group:', err);
+    res.status(500).json({ error: 'Failed to create group' });
+  }
+};
 
 export const createGroup = async (req: Request, res: Response) => {
   try {
@@ -50,6 +88,45 @@ export const getGroupById = async (req: Request, res: Response) => {
     res.json({ ...group.toJSON(), posts });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch group detail' });
+  }
+};
+
+/**
+ * Update a group
+ */
+export const updateGroup = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { groupId } = req.params;
+    const { name, description } = req.body;
+    
+    const group = await db.Group.findByPk(groupId);
+    if (!group) {
+      res.status(404).json({ message: 'Group not found' });
+      return;
+    }
+    
+    // If there's a new image and the group already has an image, delete the old one
+    if (req.file && group.image_url) {
+      await deleteFile(group.image_url, 'group');
+    }
+    
+    // Update group with new data
+    await group.update({
+      name: name || group.name,
+      description: description || group.description,
+      image_url: req.file ? req.file.filename : group.image_url
+    });
+    
+    res.json({
+      message: 'Group updated successfully',
+      group: {
+        ...group.toJSON(),
+        image_url: getImageUrl(group.image_url, 'group')
+      }
+    });
+  } catch (err) {
+    console.error('Error updating group:', err);
+    res.status(500).json({ error: 'Failed to update group' });
   }
 };
 
