@@ -20,37 +20,49 @@ declare global {
     }
 }
 
-export const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers['authorization']?.split(' ')[1];  // Token from 'Authorization: Bearer token'
+export const authenticateJWT = (req: Request, res: Response, next: NextFunction): void => {
+    // Check different common token locations
+    const authHeader = req.headers['authorization'];
+    let token = null;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];  // Token from 'Authorization: Bearer token'
+    } else if (req.query && req.query.token) {
+        token = req.query.token as string;  // Token from query param
+    } else if (req.cookies && req.cookies.token) {
+        token = req.cookies.token;  // Token from cookie
+    }
 
     if (!token) {
-        res.status(403).json({ message: 'No token provided' });
+        res.status(401).json({ message: 'Authentication required. No token provided.' });
         return;
     }
-    else {
+
+    try {
         const decoded = verifyToken(token);
 
         if (!decoded) {
             res.status(401).json({ message: 'Invalid or expired token' });
             return;
         }
-        else {
-            const { userId, username } = decoded as JwtPayloadWithUserInfo;
 
-            // Store user info in req.user instead of req.body
-            req.user = {
-                userId,
-                username
-            };
+        const { userId, username } = decoded as JwtPayloadWithUserInfo;
 
-            // Also set in req.body for backward compatibility
-            if (!req.body) {
-                req.body = {};
-            }
-            req.body.user_id = userId;
-            req.body.username = username;
+        // Store user info in req.user
+        req.user = { userId, username };
 
-            next(); // Continue to the next middleware or route handler
+        // Also set in req.body for backward compatibility
+        if (!req.body) {
+            req.body = {};
         }
+        req.body.user_id = userId;
+        req.body.username = username;
+
+        console.log(`Authenticated request from ${username} (${userId})`);
+        next(); // Continue to the next middleware or route handler
+    } catch (error) {
+        console.error('Token verification error:', error);
+        res.status(401).json({ message: 'Authentication failed' });
+        return;
     }
 };

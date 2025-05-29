@@ -1,5 +1,5 @@
 // src/services/apiClient.ts
-import { getSessionData } from './authServices';
+import { getSessionData, clearSessionData } from './authServices';
 
 // API base URL
 const API_BASE_URL = 'http://localhost:3000/api';
@@ -23,6 +23,7 @@ async function apiFetch<T = any>(path: string, options: FetchOptions = {}): Prom
   
   // Check for authentication
   if (!token && !options.allowUnauthenticated) {
+    console.warn('Authentication required for API call to:', path);
     throw new Error('Authentication required');
   }
   
@@ -40,25 +41,50 @@ async function apiFetch<T = any>(path: string, options: FetchOptions = {}): Prom
     delete headers['Content-Type'];
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  // Construct the full URL
+  const fullUrl = `${API_BASE_URL}${path}`;
+  console.log(`Making API request to: ${fullUrl}`);
 
-  let responseBody;
   try {
-    responseBody = await response.json();
-  } catch {
-    // No JSON body or parsing error
-    responseBody = null;
-  }
+    const response = await fetch(fullUrl, {
+      ...options,
+      headers,
+    });
 
-  if (!response.ok) {
-    const errorMessage = responseBody?.message || responseBody?.error || response.statusText;
-    throw new Error(errorMessage);
-  }
+    let responseBody;
+    try {
+      responseBody = await response.json();
+    } catch {
+      // No JSON body or parsing error
+      responseBody = null;
+    }
 
-  return responseBody as T;
+    // Handle authentication errors
+    if (response.status === 401) {
+      console.error('Authentication error: Token might be expired or invalid');
+      
+      // Clear the invalid token
+      clearSessionData();
+      
+      // Redirect to login page if in browser context
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
+      
+      throw new Error('Your session has expired. Please login again.');
+    }
+
+    if (!response.ok) {
+      const errorMessage = responseBody?.message || responseBody?.error || response.statusText;
+      console.error(`API error (${response.status}):`, errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    return responseBody as T;
+  } catch (error) {
+    console.error('API fetch error:', error);
+    throw error;
+  }
 }
 
 export default apiFetch;

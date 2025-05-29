@@ -22,7 +22,8 @@ const MembershipButton: React.FC<MembershipButtonProps> = ({ groupId, onMembersh
       setUserId(currentUserId);
       return currentUserId;
     };    const checkMembership = async (uid: string | null) => {
-      if (!uid || !groupId) {
+      // Early return if no valid groupId or userId
+      if (!uid || !groupId || groupId === 'undefined' || groupId === '') {
         setIsLoading(false);
         return;
       }
@@ -61,9 +62,12 @@ const MembershipButton: React.FC<MembershipButtonProps> = ({ groupId, onMembersh
       }
     };    const uid = fetchCurrentUser();
     checkMembership(uid);
-  }, [groupId, onMembershipChange, onAdminStatusChange]);
-  const handleMembershipToggle = async () => {
-    if (!userId || !groupId || isLoading) return;
+  }, [groupId, onMembershipChange, onAdminStatusChange]);  const handleMembershipToggle = async () => {
+    // Validate all required parameters
+    if (!userId || !groupId || groupId === 'undefined' || groupId === '' || isLoading) {
+      console.warn('handleMembershipToggle called with invalid parameters:', { userId, groupId, isLoading });
+      return;
+    }
 
     // If user is the creator, they can't leave
     if (isCreator) {
@@ -96,10 +100,15 @@ const MembershipButton: React.FC<MembershipButtonProps> = ({ groupId, onMembersh
     } finally {
       setIsLoading(false);
     }
-  };
-  if (isLoading) {
+  };  if (isLoading) {
     return <button className="membership-button loading">Loading...</button>;
   }
+
+  // Don't render if groupId is invalid
+  if (!groupId || groupId === 'undefined' || groupId === '') {
+    return null;
+  }
+
   // If user is the creator, show a different button
   if (isCreator) {
     return (

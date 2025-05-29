@@ -8,8 +8,8 @@ export const joinGroup = async (req: Request, res: Response): Promise<void> => {
   try {
     const { group_id, user_id } = req.body;
     
-    if (!group_id || !user_id) {
-      res.status(400).json({ error: 'Group ID and User ID are required' });
+    if (!group_id || group_id === 'undefined' || !user_id || user_id === 'undefined') {
+      res.status(400).json({ error: 'Valid Group ID and User ID are required' });
       return;
     }
     
@@ -65,8 +65,8 @@ export const leaveGroup = async (req: Request, res: Response): Promise<void> => 
   try {
     const { group_id, user_id } = req.body;
     
-    if (!group_id || !user_id) {
-      res.status(400).json({ error: 'Group ID and User ID are required' });
+    if (!group_id || group_id === 'undefined' || !user_id || user_id === 'undefined') {
+      res.status(400).json({ error: 'Valid Group ID and User ID are required' });
       return;
     }
     
@@ -107,6 +107,12 @@ export const leaveGroup = async (req: Request, res: Response): Promise<void> => 
 export const getGroupMembers = async (req: Request, res: Response): Promise<void> => {
   try {
     const { groupId } = req.params;
+    
+    // Validate parameter
+    if (!groupId || groupId === 'undefined') {
+      res.status(400).json({ error: 'Valid Group ID is required' });
+      return;
+    }
     
     // Check if group exists
     const group = await db.Group.findByPk(groupId);
@@ -149,7 +155,14 @@ export const getGroupMembers = async (req: Request, res: Response): Promise<void
 export const checkMembership = async (req: Request, res: Response): Promise<void> => {
   try {
     const { groupId, userId } = req.params;
-      // Check if group exists
+    
+    // Validate parameters
+    if (!groupId || groupId === 'undefined' || !userId || userId === 'undefined') {
+      res.status(400).json({ error: 'Valid Group ID and User ID are required' });
+      return;
+    }
+    
+    // Check if group exists
     const group = await db.Group.findByPk(groupId);
     if (!group) {
       res.status(404).json({ error: 'Group not found' });
@@ -191,6 +204,12 @@ export const checkMembership = async (req: Request, res: Response): Promise<void
 export const getUserGroups = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
+    
+    // Validate parameter
+    if (!userId || userId === 'undefined') {
+      res.status(400).json({ error: 'Valid User ID is required' });
+      return;
+    }
     
     // Check if user exists
     const user = await db.User.findByPk(userId);
@@ -235,8 +254,14 @@ export const removeMember = async (req: Request, res: Response): Promise<void> =
     const { groupId, userId } = req.params;
     const { removed_by } = req.body;
     
-    if (!removed_by) {
-      res.status(400).json({ error: 'Removed by user ID is required' });
+    // Validate parameters
+    if (!groupId || groupId === 'undefined' || !userId || userId === 'undefined') {
+      res.status(400).json({ error: 'Valid Group ID and User ID are required' });
+      return;
+    }
+    
+    if (!removed_by || removed_by === 'undefined') {
+      res.status(400).json({ error: 'Valid removed by user ID is required' });
       return;
     }
     
@@ -294,6 +319,12 @@ export const removeMember = async (req: Request, res: Response): Promise<void> =
 export const getGroupMemberCount = async (req: Request, res: Response): Promise<void> => {
   try {
     const { groupId } = req.params;
+    
+    // Validate parameter
+    if (!groupId || groupId === 'undefined') {
+      res.status(400).json({ error: 'Valid Group ID is required' });
+      return;
+    }
     
     // Check if group exists
     const group = await db.Group.findByPk(groupId);
