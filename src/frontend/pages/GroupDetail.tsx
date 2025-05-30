@@ -47,7 +47,7 @@ const GroupDetailPage: React.FC = () => {
         if (group) {
           // Map service Group to component GroupDetails
           setGroupDetails({
-            group_id: group.id,
+            group_id: group.id ?? '',
             name: group.name,
             description: group.description,
             created_by: group.created_by,
@@ -106,7 +106,7 @@ const GroupDetailPage: React.FC = () => {
           if (group) {
             // Map service Group to component GroupDetails
             setGroupDetails({
-              group_id: group.id,
+              group_id: group.id ?? '',
               name: group.name,
               description: group.description,
               created_by: group.created_by,
@@ -189,15 +189,17 @@ const GroupDetailPage: React.FC = () => {
             </span>
           </div>
         )}
-        
-        <div className="group-action-bar">
-          <MembershipButton 
-            groupId={groupId || ''} 
-            onMembershipChange={handleMembershipChange}
-            onAdminStatusChange={handleAdminStatusChange}
-          />{isAdmin && (
+          <div className="group-action-bar">
+          {groupId && (
+            <MembershipButton 
+              groupId={groupId} 
+              onMembershipChange={handleMembershipChange}
+              onAdminStatusChange={handleAdminStatusChange}
+            />
+          )}
+          {isAdmin && groupId && (
             <AdminPanel 
-              groupId={groupId || ''} 
+              groupId={groupId} 
               groupName={groupDetails?.name}
               groupDescription={groupDetails?.description}
               groupImageUrl={groupDetails?.image_url}

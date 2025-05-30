@@ -33,19 +33,19 @@ app.use('/profile', profileRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
 // Use group routes
-app.use('/api/groups', groupRoutes);
+app.use('/api/groups', authenticateJWT, groupRoutes);
 // Use post routes
-app.use('/api/posts', postRoutes);
+app.use('/api/posts', authenticateJWT, postRoutes);
 // Use membership routes
-app.use('/api/memberships', membershipRoutes);
+app.use('/api/memberships', authenticateJWT, membershipRoutes);
 // Use protected post routes (requiring membership)
-app.use('/api/protected-posts', protectedPostRoutes);
+app.use('/api/protected-posts', authenticateJWT, protectedPostRoutes);
 // Use bookmark routes
-app.use('/api/bookmarks', bookmarkRoutes);
+app.use('/api/bookmarks', authenticateJWT, bookmarkRoutes);
 // Use user routes
-app.use('/api/users', userRoutes);
+app.use('/api/users', authenticateJWT, userRoutes);
 // Use search routes
-app.use('/api/search', searchRoutes);
+app.use('/api/search', authenticateJWT, searchRoutes);
 
 // Start server
 app.listen(PORT, () => {

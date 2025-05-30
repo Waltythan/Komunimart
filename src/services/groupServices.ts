@@ -17,7 +17,13 @@ export async function createGroup(formData: FormData): Promise<Group> {
  * @returns Promise resolving to group data
  */
 export async function getGroupById(groupId: string): Promise<Group> {
-  return apiFetch<Group>(`/groups/${groupId}`);
+  const group = await apiFetch<any>(`/groups/${groupId}`);
+  // Ensure both id and group_id are available
+  return {
+    ...group,
+    id: group.group_id || group.id,
+    group_id: group.group_id || group.id
+  };
 }
 
 /**
@@ -25,7 +31,13 @@ export async function getGroupById(groupId: string): Promise<Group> {
  * @returns Promise resolving to array of groups
  */
 export async function getAllGroups(): Promise<Group[]> {
-  return apiFetch<Group[]>('/groups');
+  const groups = await apiFetch<any[]>('/groups');
+  // Map the response to ensure both id and group_id are available
+  return groups.map(group => ({
+    ...group,
+    id: group.group_id || group.id,  // Ensure id is available
+    group_id: group.group_id || group.id  // Ensure group_id is available
+  }));
 }
 
 /**

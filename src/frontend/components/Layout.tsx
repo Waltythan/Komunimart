@@ -190,12 +190,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="sidebar-section">
             <div className="sidebar-header">
               <h3>Your Groups</h3>
-            </div>
-            <div className="sidebar-menu groups-menu">
-              {groups.map(group => (
+            </div>            <div className="sidebar-menu groups-menu">
+              {groups
+                .filter(group => group && group.group_id) // Ensure groups have valid IDs
+                .map((group, index) => (
                 <Link 
                   to={`/groups/${group.group_id}`} 
-                  key={group.group_id} 
+                  key={`${group.group_id || 'group'}-${index}`} // Use index as fallback
                   className="sidebar-item group-item"
                 >
                   <div className="sidebar-group-image">

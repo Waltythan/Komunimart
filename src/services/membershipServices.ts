@@ -17,7 +17,8 @@ export interface GroupMember {
  * Interface for group data
  */
 export interface Group {
-  id: string;
+  id?: string;
+  group_id?: string;
   name: string;
   description: string;
   created_by: string;
@@ -34,6 +35,12 @@ export interface Group {
  */
 export const joinGroup = async (groupId: string, userId: string): Promise<boolean> => {
   try {
+    // Validate parameters
+    if (!groupId || groupId === 'undefined' || !userId || userId === 'undefined') {
+      console.warn('joinGroup called with invalid parameters:', { groupId, userId });
+      return false;
+    }
+    
     await apiFetch('/memberships/join', {
       method: 'POST',
       body: JSON.stringify({
@@ -57,6 +64,12 @@ export const joinGroup = async (groupId: string, userId: string): Promise<boolea
  */
 export const leaveGroup = async (groupId: string, userId: string): Promise<boolean> => {
   try {
+    // Validate parameters
+    if (!groupId || groupId === 'undefined' || !userId || userId === 'undefined') {
+      console.warn('leaveGroup called with invalid parameters:', { groupId, userId });
+      return false;
+    }
+    
     await apiFetch('/memberships/leave', {
       method: 'POST',
       body: JSON.stringify({
@@ -80,6 +93,12 @@ export const leaveGroup = async (groupId: string, userId: string): Promise<boole
  */
 export const checkGroupMembership = async (groupId: string, userId: string): Promise<boolean> => {
   try {
+    // Validate parameters
+    if (!groupId || groupId === 'undefined' || !userId || userId === 'undefined') {
+      console.warn('checkGroupMembership called with invalid parameters:', { groupId, userId });
+      return false;
+    }
+    
     const data = await apiFetch<{isMember: boolean, role?: string}>(`/memberships/check/${groupId}/${userId}`);
     return data.isMember;
   } catch (error) {
@@ -95,6 +114,12 @@ export const checkGroupMembership = async (groupId: string, userId: string): Pro
  */
 export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> => {
   try {
+    // Validate parameter
+    if (!groupId || groupId === 'undefined') {
+      console.warn('getGroupMembers called with invalid groupId:', groupId);
+      return [];
+    }
+    
     return await apiFetch<GroupMember[]>(`/memberships/group/${groupId}`);
   } catch (error) {
     console.error('Error getting group members:', error);
@@ -109,6 +134,12 @@ export const getGroupMembers = async (groupId: string): Promise<GroupMember[]> =
  */
 export const getUserGroups = async (userId: string): Promise<Group[]> => {
   try {
+    // Validate parameter
+    if (!userId || userId === 'undefined') {
+      console.warn('getUserGroups called with invalid userId:', userId);
+      return [];
+    }
+    
     return await apiFetch<Group[]>(`/memberships/user/${userId}`);
   } catch (error) {
     console.error('Error getting user groups:', error);
@@ -124,6 +155,12 @@ export const getUserGroups = async (userId: string): Promise<Group[]> => {
  */
 export const isGroupCreator = async (groupId: string, userId: string): Promise<boolean> => {
   try {
+    // Validate parameters
+    if (!groupId || groupId === 'undefined' || !userId || userId === 'undefined') {
+      console.warn('isGroupCreator called with invalid parameters:', { groupId, userId });
+      return false;
+    }
+    
     const groupData = await apiFetch<Group>(`/groups/${groupId}`);
     return groupData.created_by === userId;
   } catch (error) {
@@ -140,6 +177,12 @@ export const isGroupCreator = async (groupId: string, userId: string): Promise<b
  */
 export const isGroupAdmin = async (groupId: string, userId: string): Promise<boolean> => {
   try {
+    // Validate parameters
+    if (!groupId || groupId === 'undefined' || !userId || userId === 'undefined') {
+      console.warn('isGroupAdmin called with invalid parameters:', { groupId, userId });
+      return false;
+    }
+    
     // First check if user is creator
     try {
       const groupData = await apiFetch<Group>(`/groups/${groupId}`);
@@ -163,12 +206,28 @@ export const isGroupAdmin = async (groupId: string, userId: string): Promise<boo
   }
 };
 
-// Function to get member count of a group
-export const getGroupMemberCount = async (groupId: string): Promise<number> => {
+/**
+ * Function to get member count of a group
+ * @param groupId - ID of the group
+ * @returns Promise resolving to number of members in the group
+ */
+export const getGroupMemberCount = async (groupId?: string): Promise<number> => {
   try {
-    // Use the existing getGroupMembers function and count the results
-    const members = await getGroupMembers(groupId);
-    return members.length;
+    // Check if groupId is valid
+    if (!groupId) {
+      console.warn('getGroupMemberCount called with undefined or empty groupId');
+      return 0;
+    }
+    
+    try {
+      // Use the optimized count endpoint if available
+      const data = await apiFetch<{count: number}>(`/memberships/group/${groupId}/count`);
+      return data.count;
+    } catch {
+      // Fallback to the old method if count endpoint fails
+      const members = await getGroupMembers(groupId);
+      return members.length;
+    }
   } catch (error) {
     console.error('Error getting group member count:', error);
     return 0;
@@ -183,6 +242,12 @@ export const getGroupMemberCount = async (groupId: string): Promise<number> => {
  */
 export const removeMemberFromGroup = async (groupId: string, userId: string): Promise<boolean> => {
   try {
+    // Validate parameters
+    if (!groupId || groupId === 'undefined' || !userId || userId === 'undefined') {
+      console.warn('removeMemberFromGroup called with invalid parameters:', { groupId, userId });
+      return false;
+    }
+    
     const currentUserId = getCurrentUserId();
     
     if (!currentUserId) {
