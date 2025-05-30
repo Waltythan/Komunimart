@@ -59,7 +59,13 @@ export const getUserBookmarks = async (userId?: string): Promise<any[]> => {
 export const checkBookmarkStatus = async (postId: string): Promise<boolean> => {
   try {
     const userId = getCurrentUserId();
-    if (!userId) return false;
+    if (!userId || !postId) return false;
+    
+    // Don't query API if postId is invalid
+    if (!postId || postId === 'undefined' || postId === 'null' || postId === undefined) {
+      console.warn('checkBookmarkStatus called with invalid postId:', postId);
+      return false;
+    }
     
     const data = await apiFetch(`/bookmarks/status?user_id=${userId}&post_id=${postId}`);
     return data.isBookmarked;

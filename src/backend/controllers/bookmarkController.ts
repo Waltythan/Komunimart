@@ -161,11 +161,25 @@ export const checkBookmarkStatus = async (req: Request, res: Response) => {
       return;
     }
 
-    const bookmark = await db.Bookmark.findOne({
-      where: { user_id, post_id, bookmarked: true }
-    });
+    // Validate post_id format - check if it's a valid UUID
+    if (post_id === 'undefined' || post_id === 'null' || post_id === '' || 
+        post_id === null || typeof post_id !== 'string' || 
+        !post_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      res.status(200).json({ isBookmarked: false });
+      return;
+    }
 
-    res.status(200).json({ isBookmarked: !!bookmark });
+    try {
+      const bookmark = await db.Bookmark.findOne({
+        where: { user_id, post_id, bookmarked: true }
+      });
+
+      res.status(200).json({ isBookmarked: !!bookmark });
+    } catch (queryError) {
+      // If there's a database error (likely due to invalid UUID format), return default value
+      console.error('Database query error in checkBookmarkStatus:', queryError);
+      res.status(200).json({ isBookmarked: false });
+    }
   } catch (err) {
     console.error('Error checking bookmark status:', err);
     res.status(500).json({ error: 'Failed to check bookmark status' });

@@ -26,8 +26,7 @@ export const normalizeImageUrl = (imageUrl: string | null | undefined, type?: 'p
   // If it already has the /uploads path, just add the backend URL
   if (imageUrl.startsWith('/uploads/')) {
     return `${BACKEND_URL}${imageUrl}`;
-  }
-  // Special handling based on the actual folder structure we observed
+  }  // Special handling based on the actual folder structure we observed
   if (/^\d{13}-\d+-/.test(imageUrl)) {
     // Check if it's a group image - groups are consistently in /uploads/groups/
     if (type === 'groups') {
@@ -39,8 +38,13 @@ export const normalizeImageUrl = (imageUrl: string | null | undefined, type?: 'p
       return `${BACKEND_URL}/uploads/profiles/${imageUrl}`;
     }
     
-    // Post images with timestamp pattern are directly in /uploads/ root
-    if (type === 'posts' || !type) {
+    // Post images should be in /uploads/posts/
+    if (type === 'posts') {
+      return `${BACKEND_URL}/uploads/posts/${imageUrl}`;
+    }
+    
+    // If no type is specified, default to root /uploads/
+    if (!type) {
       return `${BACKEND_URL}/uploads/${imageUrl}`;
     }
   }

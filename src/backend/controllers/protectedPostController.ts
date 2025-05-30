@@ -69,8 +69,12 @@ export const createProtectedPost = async (req: Request, res: Response): Promise<
 export const getProtectedGroupPosts = async (req: Request, res: Response): Promise<void> => {
   try {
     const { groupId } = req.params;
+    const userId = req.user?.userId;
+    
+    console.log(`getProtectedGroupPosts: Fetching posts for group ${groupId} requested by user ${userId}`);
     
     if (!groupId) {
+      console.warn('getProtectedGroupPosts: Group ID is missing');
       res.status(400).json({ message: 'Group ID is required' });
       return;
     }
@@ -88,19 +92,24 @@ export const getProtectedGroupPosts = async (req: Request, res: Response): Promi
       order: [['created_at', 'DESC']]
     });
     
+    console.log(`getProtectedGroupPosts: Found ${posts.length} posts for group ${groupId}`);
+    
     // Process posts to include proper image URLs
     const processedPosts = posts.map((post: any) => {
       const postData = post.toJSON();
       return {
         ...postData,
+        id: postData.post_id, // Ensure ID is consistent
         image_url: getImageUrl(postData.image_url, 'post'),
         author: {
           ...postData.author,
+          id: postData.author?.user_id, // Ensure ID is consistent
           profile_pic: getImageUrl(postData.author?.profile_pic, 'profile')
         }
       };
     });
     
+    console.log(`getProtectedGroupPosts: Returning ${processedPosts.length} processed posts`);
     res.json(processedPosts);
   } catch (err) {
     console.error('Error getting group posts:', err);
@@ -115,33 +124,43 @@ export const getProtectedPostById = async (req: Request, res: Response): Promise
   try {
     const { postId } = req.params;
     const userId = req.user?.userId;
+    
     if (!userId) {
       res.status(401).json({ message: 'Authentication required' });
       return;
     }
-    // Find the post with its author and comments
-    const post = await db.Post.findOne({
-      where: { post_id: postId },
-      include: [
-        { 
-          model: db.User, 
-          as: 'author',
-          attributes: ['user_id', 'uname', 'profile_pic'] 
-        },
-        {
-          model: db.Comment,
-          as: 'comments',
-          include: [
-            {
-              model: db.User,
-              as: 'author',
-              attributes: ['user_id', 'uname', 'profile_pic']
-            }
-          ],
-          order: [['created_at', 'DESC']]
-        }
-      ]
-    });
+    
+    // Validate post_id format - check if it's a valid UUID
+    if (!postId || postId === 'undefined' || postId === 'null' || 
+        !postId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      res.status(404).json({ message: 'Invalid post ID format' });
+      return;
+    }
+    
+    try {
+      // Find the post with its author and comments
+      const post = await db.Post.findOne({
+        where: { post_id: postId },
+        include: [
+          { 
+            model: db.User, 
+            as: 'author',
+            attributes: ['user_id', 'uname', 'profile_pic'] 
+          },
+          {
+            model: db.Comment,
+            as: 'comments',
+            include: [
+              {
+                model: db.User,
+                as: 'author',
+                attributes: ['user_id', 'uname', 'profile_pic']
+              }
+            ],
+            order: [['created_at', 'DESC']]
+          }
+        ]
+      });
     
     if (!post) {
       res.status(404).json({ message: 'Post not found' });
@@ -167,8 +186,7 @@ export const getProtectedPostById = async (req: Request, res: Response): Promise
     
     // Process the post to include proper image URLs
     const postData = post.toJSON();
-    
-    const processedPost = {
+      const processedPost = {
       ...postData,
       image_url: getImageUrl(postData.image_url, 'post'),
       author: {
@@ -188,6 +206,11 @@ export const getProtectedPostById = async (req: Request, res: Response): Promise
     };
     
     res.json(processedPost);
+    } catch (dbError) {
+      console.error('Error checking post access:', dbError);
+      res.status(404).json({ message: 'Post not found or database error' });
+      return;
+    }
   } catch (err) {
     console.error('Error getting post details:', err);
     res.status(500).json({ error: 'Failed to get post details' });

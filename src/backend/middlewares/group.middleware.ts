@@ -8,12 +8,16 @@ export const checkGroupMembership = async (req: Request, res: Response, next: Ne
     
     // Get the user ID from the authenticated user (set by authenticateJWT middleware)
     const userId = req.user?.userId;
+    console.log(`checkGroupMembership: Checking membership for user ${userId} in group ${groupId}`);
+    
     if (!userId) {
+      console.warn('checkGroupMembership: No user ID found in request');
       res.status(401).json({ error: 'Authentication required' });
       return;
     }
     
     if (!groupId) {
+      console.warn('checkGroupMembership: No group ID found in request');
       res.status(400).json({ error: 'Group ID is required' });
       return;
     }
@@ -21,12 +25,14 @@ export const checkGroupMembership = async (req: Request, res: Response, next: Ne
     // Check if the group exists
     const group = await db.Group.findByPk(groupId);
     if (!group) {
+      console.warn(`checkGroupMembership: Group ${groupId} not found`);
       res.status(404).json({ error: 'Group not found' });
       return;
     }
     
     // Check if the user created the group - creators always have access
     if (group.created_by === userId) {
+      console.log(`checkGroupMembership: User ${userId} is the creator of group ${groupId}`);
       next();
       return;
     }
@@ -40,6 +46,7 @@ export const checkGroupMembership = async (req: Request, res: Response, next: Ne
     });
     
     if (!membership) {
+      console.warn(`checkGroupMembership: User ${userId} is not a member of group ${groupId}`);
       res.status(403).json({ 
         error: 'Access denied', 
         message: 'You are not a member of this group' 
@@ -47,6 +54,7 @@ export const checkGroupMembership = async (req: Request, res: Response, next: Ne
       return;
     }
     
+    console.log(`checkGroupMembership: User ${userId} is a member of group ${groupId}`);
     // User is a member, proceed to the next middleware or route handler
     next();
   } catch (err) {

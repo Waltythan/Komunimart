@@ -5,18 +5,23 @@ import { getCurrentUserId } from './userServices';
  * Interface for Post data
  */
 export interface Post {
-  id: string;
+  id?: string;
+  post_id?: string;  // Handle both naming conventions
   title: string;
   content: string;
-  created_by: string;
+  created_by?: string;
+  author_id?: string; // Handle both naming conventions
   group_id?: string;
   image_url?: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   author?: {
-    id: string;
-    username: string;
+    id?: string;
+    user_id?: string; // Handle both naming conventions
+    username?: string;
+    uname?: string;   // Handle both naming conventions
     profile_image?: string;
+    profile_pic?: string; // Handle both naming conventions
   };
 }
 
@@ -55,7 +60,22 @@ export async function createPost(formData: FormData): Promise<Post> {
  * @returns Promise resolving to post data
  */
 export async function getProtectedPostById(postId: string): Promise<Post> {
-  return apiFetch<Post>(`/protected-posts/${postId}`);
+  // Strict UUID validation
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!postId || postId === 'undefined' || postId === 'null' || !uuidPattern.test(postId)) {
+    console.error('Invalid post ID format in getProtectedPostById:', postId);
+    throw new Error('Invalid post ID format');
+  }
+  
+  try {
+    console.log(`Fetching protected post with ID: ${postId}`);
+    const post = await apiFetch<Post>(`/protected-posts/${postId}`);
+    console.log('Successfully fetched protected post:', post);
+    return post;
+  } catch (error: any) {
+    console.error(`Error fetching protected post ${postId}:`, error);
+    throw error;
+  }
 }
 
 /**
@@ -64,6 +84,11 @@ export async function getProtectedPostById(postId: string): Promise<Post> {
  * @returns Promise resolving to post data
  */
 export async function getPostById(postId: string): Promise<Post> {
+  // Strict UUID validation
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!postId || postId === 'undefined' || postId === 'null' || !uuidPattern.test(postId)) {
+    throw new Error('Invalid post ID format');
+  }
   return apiFetch<Post>(`/posts/${postId}`);
 }
 
@@ -112,6 +137,11 @@ export const deletePost = async (postId: string): Promise<boolean> => {
  * @returns Promise resolving to array of comments
  */
 export async function getCommentsByPost(postId: string): Promise<Comment[]> {
+  // Strict UUID validation
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!postId || postId === 'undefined' || postId === 'null' || !uuidPattern.test(postId)) {
+    throw new Error('Invalid post ID format');
+  }
   return apiFetch<Comment[]>(`/posts/${postId}/comments`);
 }
 
@@ -122,6 +152,11 @@ export async function getCommentsByPost(postId: string): Promise<Comment[]> {
  * @returns Promise resolving to created comment
  */
 export async function createCommentOnPost(postId: string, formData: FormData): Promise<Comment> {
+  // Strict UUID validation
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!postId || postId === 'undefined' || postId === 'null' || !uuidPattern.test(postId)) {
+    throw new Error('Invalid post ID format');
+  }
   return apiFetch<Comment>(`/protected-posts/${postId}/comments`, { method: 'POST', body: formData });
 }
 
@@ -153,16 +188,38 @@ export interface LikeCountResponse {
 
 // Get like count and whether current user liked the post
 export async function getPostLikeCount(postId: string, userId?: string): Promise<LikeCountResponse> {
+  // Check if postId is valid
+  if (!postId || postId === 'undefined' || postId === 'null') {
+    return { count: 0, likedByUser: false };
+  }
+  
   let path = `/posts/likes/count?likeable_id=${postId}&likeable_type=Post`;
   if (userId) path += `&user_id=${userId}`;
-  return apiFetch(path);
+  
+  try {
+    return await apiFetch(path);
+  } catch (error) {
+    console.error('Error fetching post like count:', error);
+    return { count: 0, likedByUser: false };
+  }
 }
 
 // Get like count and whether current user liked the comment
 export async function getCommentLikeCount(commentId: string, userId?: string): Promise<LikeCountResponse> {
+  // Check if commentId is valid
+  if (!commentId || commentId === 'undefined' || commentId === 'null') {
+    return { count: 0, likedByUser: false };
+  }
+  
   let path = `/posts/likes/count?likeable_id=${commentId}&likeable_type=Comment`;
   if (userId) path += `&user_id=${userId}`;
-  return apiFetch(path);
+  
+  try {
+    return await apiFetch(path);
+  } catch (error) {
+    console.error('Error fetching comment like count:', error);
+    return { count: 0, likedByUser: false };
+  }
 }
 
 // Add a like to a post

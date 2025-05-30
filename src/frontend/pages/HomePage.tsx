@@ -18,18 +18,35 @@ import '../styles/HomePage.css';
 
 // Helper function to adapt service post type to component post type
 const adaptPostFormat = (post: ServicePost, groupInfo: {group_id: string, name: string}): Post => {
+  // Extract IDs with fallbacks to handle both field naming conventions
+  const postId = post.id || post.post_id;
+  const authorId = post.author?.id || post.author?.user_id || post.created_by || 'unknown';
+  const authorName = post.author?.username || post.author?.uname || 'Unknown';
+  
+  // Validate post ID format (must be a valid UUID)
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isValidId = postId && 
+                   typeof postId === 'string' && 
+                   postId !== 'undefined' && 
+                   postId !== 'null' && 
+                   postId.trim() !== '' &&
+                   uuidPattern.test(postId);
+  
+  console.log(`adaptPostFormat: Processing post with ID ${postId}, valid: ${isValidId}`);
+  console.log('Post data:', JSON.stringify(post, null, 2));
+    
   return {
-    post_id: post.id,
+    post_id: isValidId ? postId : "",
     title: post.title,
     content: post.content,
-    author_id: post.created_by,
-    created_at: post.created_at,
+    author_id: authorId,
+    created_at: post.created_at || new Date().toISOString(),
     image_url: post.image_url,
     group_id: post.group_id || groupInfo.group_id,
     author: {
-      user_id: post.author?.id || post.created_by,
-      uname: post.author?.username || 'Unknown',
-      profile_pic: post.author?.profile_image
+      user_id: authorId,
+      uname: authorName,
+      profile_pic: post.author?.profile_image || post.author?.profile_pic
     },
     group: groupInfo
   };
@@ -90,10 +107,10 @@ const HomePage: React.FC = () => {
         
         // Map the service Group interface to the frontend Group interface
         const adaptedGroups = userGroupsFromAPI.map(group => ({
-          group_id: group.id,
+          group_id: group.id ?? "",
           name: group.name,
           description: group.description,
-          image_url: group.image_url,
+          image_url: group.image_url ?? "",
           created_at: group.created_at,
           created_by: group.created_by
         }));
@@ -110,24 +127,36 @@ const HomePage: React.FC = () => {
         await Promise.all(
           adaptedGroups.map(async (group) => {
             try {              // Use the groupServices function to fetch posts
-              const groupPosts = await getGroupPosts(group.group_id);
+              console.log(`Fetching posts for group: ${group.name} (ID: ${group.group_id})`);
+              const groupPosts = await getGroupPosts(group.group_id ?? "");
+              console.log(`Received ${groupPosts.length} posts for group ${group.name}:`, groupPosts);
               
               // Convert service posts to component-compatible format
               const postsWithGroup = groupPosts.map((post) => 
                 adaptPostFormat(post, {
-                  group_id: group.group_id,
+                  group_id: group.group_id ?? "",
                   name: group.name
                 })
               );
+              console.log(`Processed ${postsWithGroup.length} posts for group ${group.name}:`, postsWithGroup);
               allPosts.push(...postsWithGroup);
             } catch (error) {
               console.error(`Error fetching posts for group ${group.name}:`, error);
             }
-          })
+          })        );        // Filter out posts with invalid post_id using proper UUID validation
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const validPosts = allPosts.filter(post => 
+          post.post_id && 
+          post.post_id !== "" && 
+          post.post_id !== "undefined" && 
+          post.post_id !== "null" &&
+          uuidPattern.test(post.post_id)
         );
-
+        
+        console.log('Valid posts after filtering:', validPosts.length, 'of', allPosts.length);
+        
         // Sort posts by creation date (newest first)
-        const sortedPosts = allPosts.sort((a, b) => 
+        const sortedPosts = validPosts.sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
 
@@ -135,20 +164,34 @@ const HomePage: React.FC = () => {
         await Promise.all(
           sortedPosts.map(async (post) => {
             try {
+              // Skip API call for posts with invalid IDs
+              if (!post.post_id || post.post_id === 'undefined' || post.post_id === 'null') {
+                setPostLikes(prev => ({ ...prev, [post.post_id]: 0 }));
+                setPostLiked(prev => ({ ...prev, [post.post_id]: false }));
+                return;
+              }
+              
               const likeData = await getPostLikeCount(post.post_id, userId || undefined);
               setPostLikes(prev => ({ ...prev, [post.post_id]: likeData.count || 0 }));
               setPostLiked(prev => ({ ...prev, [post.post_id]: likeData.likedByUser || false }));
             } catch (error) {
               console.error(`Error fetching likes for post ${post.post_id}:`, error);
+              // Set default values on error
+              setPostLikes(prev => ({ ...prev, [post.post_id]: 0 }));
+              setPostLiked(prev => ({ ...prev, [post.post_id]: false }));
             }
           })
-        );
-
-        // Fetch bookmark status for all posts
+        );        // Fetch bookmark status for all posts
         const bookmarkStatus: { [key: string]: boolean } = {};
         await Promise.all(
           sortedPosts.map(async (post) => {
             try {
+              // Skip API call for posts with invalid IDs
+              if (!post.post_id || post.post_id === 'undefined' || post.post_id === 'null') {
+                bookmarkStatus[post.post_id] = false;
+                return;
+              }
+              
               bookmarkStatus[post.post_id] = await checkBookmarkStatus(post.post_id);
             } catch (error) {
               console.error(`Error checking bookmark status for post ${post.post_id}:`, error);
@@ -199,9 +242,14 @@ const HomePage: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-  const handleLikePost = async (postId: string) => {
+  };  const handleLikePost = async (postId: string) => {
     if (!userId) return;
+    
+    // Validate post ID
+    if (!postId || postId === 'undefined' || postId === 'null') {
+      console.warn('Cannot like post with invalid ID:', postId);
+      return;
+    }
 
     const isLiked = postLiked[postId];
     try {
@@ -233,8 +281,13 @@ const HomePage: React.FC = () => {
       }));
     }
   };
-
   const handleToggleBookmark = async (postId: string) => {
+    // Validate post ID
+    if (!postId || postId === 'undefined' || postId === 'null') {
+      console.warn('Cannot bookmark post with invalid ID:', postId);
+      return;
+    }
+    
     const isBookmarked = bookmarkedPosts[postId];
     try {
       if (isBookmarked) {
@@ -310,9 +363,8 @@ const HomePage: React.FC = () => {
         <p>Latest posts from {groups.length} group{groups.length !== 1 ? 's' : ''} you've joined</p>
       </div>
 
-      <div className="posts-feed">
-        {posts.map(post => (
-          <div key={post.post_id} className="post-card">
+      <div className="posts-feed">        {posts.map((post, index) => (
+          <div key={post.post_id || `post-${index}`} className="post-card">
             <div className="post-header">
               <div className="post-author">
                 <div className="author-avatar">
@@ -369,9 +421,7 @@ const HomePage: React.FC = () => {
                   />
                 </div>
               )}
-            </div>
-
-            <div className="post-actions">
+            </div>            <div className="post-actions">
               <div className="action-buttons">
                 <button
                   className={`action-btn like-btn ${postLiked[post.post_id] ? 'active' : ''}`}
@@ -382,15 +432,27 @@ const HomePage: React.FC = () => {
                   </svg>
                   Like
                   {postLikes[post.post_id] > 0 && <span className="count">({postLikes[post.post_id]})</span>}
-                </button>                <Link to={`/post/${post.post_id}`} className="action-btn comment-btn">
+                </button>
+                
+                <Link 
+                  to={post.post_id ? `/post/${post.post_id}` : '#'} 
+                  onClick={(e) => {
+                    // Validate UUID format
+                    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                    if (!post.post_id || !uuidPattern.test(post.post_id)) {
+                      e.preventDefault();
+                      alert('Cannot comment on this post: post ID is missing or invalid');
+                      return;
+                    }
+                  }}
+                  className="action-btn comment-btn"
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" stroke="currentColor" strokeWidth="0.5" viewBox="0 0 16 16">
-                    <path d="M8 15c4.418 0 8-3.134 8-7s-3.582-7-8-7-8 3.134-8 7c0 1.76.743 3.37 1.97 4.6-.097 1.016-.417 2.13-.771 2.966-.079.186.074.394.273.362 2.256-.37 3.597-.938 4.18-1.234A9.06 9.06 0 0 0 8 15z"/>
-                    <path d="M5 6a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                    <path d="M8 15c4.418 0 8-3.134 8-7s-3.582-7-8-7-8 3.134-8 7c0 1.76.743 3.37 1.97 4.6-.097 1.016-.417 2.13-.771 2.966-.079.186.074.394.273.362 2.256-.37 3.597-.938 4.18-1.234A9.063 9.063 0 0 0 8 15z" />
                   </svg>
                   Comment
                 </Link>
-
-                <button
+                  <button
                   className={`action-btn bookmark-btn ${bookmarkedPosts[post.post_id] ? 'active' : ''}`}
                   onClick={() => handleToggleBookmark(post.post_id)}
                 >
@@ -400,8 +462,21 @@ const HomePage: React.FC = () => {
                   {bookmarkedPosts[post.post_id] ? 'Saved' : 'Save'}
                 </button>
               </div>
-
-              <Link to={`/post/${post.post_id}`} className="view-post-btn">
+              
+              {/* View Full Post button */}
+              <Link 
+                to={post.post_id ? `/post/${post.post_id}` : '#'} 
+                onClick={(e) => {
+                  // Validate UUID format
+                  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                  if (!post.post_id || !uuidPattern.test(post.post_id)) {
+                    e.preventDefault();
+                    alert('Cannot view this post: post ID is missing or invalid');
+                    return;
+                  }
+                }}
+                className="view-post-btn"
+              >
                 View Full Post
               </Link>
             </div>

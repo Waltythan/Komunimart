@@ -53,6 +53,8 @@ const PostDetail: React.FC = () => {
   const [commentLikes, setCommentLikes] = useState<Record<string, number>>({}); const [commentLiked, setCommentLiked] = useState<Record<string, boolean>>({});
   // Current user profile
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+  // Error state
+  const [error, setError] = useState<string | null>(null);
   // For File upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
@@ -77,50 +79,86 @@ const PostDetail: React.FC = () => {
   const userId = getCurrentUserId();
   // Restricted content state
   const [isRestricted, setIsRestricted] = useState<boolean>(false);
-  const [restrictedGroupId, setRestrictedGroupId] = useState<string | null>(null);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [restrictedGroupId, setRestrictedGroupId] = useState<string | null>(null);  const [bookmarked, setBookmarked] = useState(false);
+  
   // Fetch post detail & comments
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Use the protected post service that checks for group membership
-        try {
-          const postData = await getProtectedPostById(postId!);
-          setPost(postData);
-          setIsRestricted(false);
-        } catch (error: any) {
-          if (error.message.includes('403') || error.message.includes('Access denied')) {
-            // Set post with restricted info - extract group_id from error if available
-            setIsRestricted(true);
-            // Try to extract group_id from error, or set a default
-            const groupIdMatch = error.message.match(/group_id[:\s]+([a-zA-Z0-9-]+)/);
-            setRestrictedGroupId(groupIdMatch ? groupIdMatch[1] : null);
-            return; // Don't try to load comments if access is denied
-          }
-          throw error; // Re-throw other errors
+        // Improved validation for postId - check if it's a valid UUID
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!postId || postId === 'undefined' || postId === 'null' || !uuidPattern.test(postId)) {
+          console.error(`Invalid post ID format: ${postId}`);
+          throw new Error('Invalid post ID format');
         }
-          // Only fetch comments if we have access to the post
-        const commentData = await getCommentsByPost(postId!);
-        // Use author data from backend response - map service comment to component comment
-        const enhancedComments = commentData.map((comment: any) => ({
-          comment_id: comment.id || comment.comment_id,
-          author_id: comment.created_by || comment.author_id,
-          text: comment.content || comment.text,
-          parent_id: comment.parent_id,
-          author: comment.author,
-          image_url: comment.image_url,
-          created_at: comment.created_at || new Date().toISOString(),
-        }));
-        setComments(enhancedComments);
-      } catch (error) {
+
+        // Use the protected post service that checks for group membership
+        let postData;
+        let postAccessible = false;
+        try {
+          console.log(`Fetching post data for ID: ${postId}`);
+          postData = await getProtectedPostById(postId!);
+          console.log('Successfully fetched post data:', postData);
+          setPost({
+            ...postData,
+            post_id: postData.id || postData.post_id, // Support both field naming conventions
+            author_id: postData.created_by || postData.author_id,
+            author: {
+              ...postData.author,
+              user_id: postData.author?.id || postData.author?.user_id,
+              uname: postData.author?.username || postData.author?.uname
+            }
+          });
+          setIsRestricted(false);
+          postAccessible = true;
+        } catch (error: any) {
+          console.error('Error fetching post data:', error);
+          setIsRestricted(true);
+          // Try to extract group_id from error, or set a default
+          const groupIdMatch = error.message && error.message.match(/group_id[:\s]+([a-zA-Z0-9-]+)/);
+          setRestrictedGroupId(groupIdMatch ? groupIdMatch[1] : null);
+          setPost(null);
+          postAccessible = false;
+        }
+
+        // Only fetch comments if we have access to the post
+        if (postAccessible) {
+          const commentData = await getCommentsByPost(postId!);
+          // Use author data from backend response - map service comment to component comment
+          const enhancedComments = commentData.map((comment: any) => ({
+            comment_id: comment.id || comment.comment_id,
+            author_id: comment.created_by || comment.author_id,
+            text: comment.content || comment.text,
+            parent_id: comment.parent_id,
+            author: comment.author,
+            image_url: comment.image_url,
+            created_at: comment.created_at || new Date().toISOString(),
+          }));
+          setComments(enhancedComments);
+        } else {
+          setComments([]);
+        }
+      } catch (error: any) {
         console.error('Error fetching post data:', error);
+        setError(error.message || 'Failed to load post data');
+        // Handle invalid post ID error specifically
+        if (
+          error.message === 'Invalid post ID format' ||
+          error.message === 'Invalid post ID' ||
+          (error.message && error.message.includes('not found'))
+        ) {
+          setError('Post not found. The post ID is invalid or the post does not exist.');
+          setTimeout(() => {
+            navigate('/');
+          }, 2000); // Redirect after 2 seconds
+        }
       } finally {
         setLoading(false);
       }
     };
     if (postId) fetchData();
-  }, [postId]);
+  }, [postId, navigate]);
   // Function to refresh comments
   const refreshComments = async () => {
     if (!postId) return;
@@ -440,8 +478,8 @@ const PostDetail: React.FC = () => {
                       <span className="like-count">
                         <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
                           <path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2.144 2.144 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a9.84 9.84 0 0 0-.443.05 9.365 9.365 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111L8.864.046z" />
-                        </svg>
-                        {commentLikes[comment.comment_id] || 0}
+                </svg>
+                {commentLikes[comment.comment_id] || 0}
                       </span>
                     )}
                   </div>

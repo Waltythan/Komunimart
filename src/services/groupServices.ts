@@ -80,5 +80,19 @@ export const deleteGroup = async (groupId: string): Promise<boolean> => {
  * @returns Promise resolving to array of posts
  */
 export async function getGroupPosts(groupId: string): Promise<any[]> {
-  return apiFetch<any[]>(`/protected-posts/group/${groupId}`);
+  // Basic validation for group ID
+  if (!groupId || groupId === 'undefined' || groupId === 'null' || groupId.trim() === '') {
+    console.error('Invalid group ID provided to getGroupPosts:', groupId);
+    return [];
+  }
+  
+  try {
+    console.log(`Calling API endpoint: /protected-posts/group/${groupId}`);
+    const posts = await apiFetch<any[]>(`/protected-posts/group/${groupId}`);
+    console.log(`API returned ${posts?.length || 0} posts for group ${groupId}`);
+    return posts || [];
+  } catch (error) {
+    console.error(`Error in getGroupPosts for group ${groupId}:`, error);
+    return [];
+  }
 }

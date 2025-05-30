@@ -50,11 +50,10 @@ const MainPage: React.FC = () => {
         // Fetch group details
         const groups = await getAllGroups();
         const currentGroup = groups.find((g: any) => String(g.id) === groupId);
-        if (currentGroup) {
-          // Fetch actual member count for this group
+        if (currentGroup) {          // Fetch actual member count for this group
           const memberCount = await getGroupMemberCount(currentGroup.id);
           setGroup({
-            group_id: currentGroup.id,
+            group_id: currentGroup.id || "",
             name: currentGroup.name,
             description: currentGroup.description,
             image_url: currentGroup.image_url,
@@ -279,10 +278,21 @@ const MainPage: React.FC = () => {
                           <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
                         </svg>
                       </button>
-                    </div>
-                  </div>
+                    </div>                  </div>
 
-                  <Link to={`/post/${post.post_id}`} className="post-link">
+                  <Link 
+                    to={`/post/${post.post_id}`} 
+                    className="post-link"
+                    onClick={(e) => {
+                      // Validate UUID format
+                      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                      if (!post.post_id || !uuidPattern.test(post.post_id)) {
+                        e.preventDefault();
+                        alert('Cannot view this post: post ID is missing or invalid');
+                        return;
+                      }
+                    }}
+                  >
                     <h3 className="post-title">{post.title}</h3>
                     <p className="post-content">
                       {post.content.length > 300
@@ -322,14 +332,26 @@ const MainPage: React.FC = () => {
                     <div className="stats-item">
                       <span>{post.comments_count} comments</span>
                     </div>
-                  </div>                  <div className="post-actions-bar button-container">
-                    <button className="post-action-btn" aria-label="Like">
+                  </div>                  <div className="post-actions-bar button-container">                    <button className="post-action-btn" aria-label="Like">
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16" className="post-btn-icon">
                         <path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2.144 2.144 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a9.84 9.84 0 0 0-.443.05 9.365 9.365 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111L8.864.046z"/>
                       </svg>
                       <span className="post-btn-text">Like</span>
                     </button>
-                    <Link to={`/post/${post.post_id}`} className="post-action-btn" aria-label="Comment">
+                    <Link 
+                      to={`/post/${post.post_id}`} 
+                      className="post-action-btn" 
+                      aria-label="Comment"
+                      onClick={(e) => {
+                        // Validate UUID format
+                        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                        if (!post.post_id || !uuidPattern.test(post.post_id)) {
+                          e.preventDefault();
+                          alert('Cannot view comments: post ID is missing or invalid');
+                          return;
+                        }
+                      }}
+                    >
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16" className="post-btn-icon">
                         <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-2.5a2 2 0 0 0-1.6.8L8 14.333 6.1 11.8a2 2 0 0 0-1.6-.8H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12z"/>
                         <path d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6zm0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>

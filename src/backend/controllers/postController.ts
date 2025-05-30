@@ -214,13 +214,28 @@ export const getLikeCount = async (req: Request, res: Response): Promise<void> =
       res.status(400).json({ error: 'likeable_id and likeable_type are required' });
       return;
     }
-    const count = await db.Like.count({ where: { likeable_id, likeable_type } });
-    let likedByUser = false;
-    if (user_id) {
-      const like = await db.Like.findOne({ where: { likeable_id, likeable_type, user_id } });
-      likedByUser = !!like;
+
+    // Handle invalid IDs by returning default values
+    if (likeable_id === 'undefined' || likeable_id === 'null' || likeable_id === '' || 
+        likeable_id === null || typeof likeable_id !== 'string' || 
+        !likeable_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      res.json({ count: 0, likedByUser: false });
+      return;
     }
-    res.json({ count, likedByUser });
+    
+    try {
+      const count = await db.Like.count({ where: { likeable_id, likeable_type } });
+      let likedByUser = false;
+      if (user_id) {
+        const like = await db.Like.findOne({ where: { likeable_id, likeable_type, user_id } });
+        likedByUser = !!like;
+      }
+      res.json({ count, likedByUser });
+    } catch (queryError) {
+      // If there's a database error (likely due to invalid UUID format), return default values
+      console.error('Database query error in getLikeCount:', queryError);
+      res.json({ count: 0, likedByUser: false });
+    }
   } catch (err) {
     console.error('getLikeCount error:', err);
     res.status(500).json({ error: 'Failed to get like count' });
